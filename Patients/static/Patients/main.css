@@ -1,0 +1,190 @@
+
+    /* Reset default margin and padding */
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: 'Poppins', sans-serif;
+font-size: 13px;
+}
+
+    /* Layout */
+main {
+display: flex;
+height: 100vh;
+background-color: #f5f7fa;
+}
+
+/* Sidebar */
+.Info-panel {
+width: 20vw;
+background-color: aliceblue; /* Reference color from the design */
+color: black;
+display: flex;
+flex-direction: column;
+padding: 15px 15px 0 15px;
+min-height: 100vh;
+}
+
+.Info-panel img {
+    width: 45px;
+    height: 45px;
+    border-radius: 5px;
+}
+
+.Info-panel b {
+    font-size: 20px;
+    margin-left: 12px;
+}
+
+.Info-panel p {
+    margin-top: 12px;
+    font-size: 15px;
+    opacity: 0.9;
+}
+
+nav p {
+    margin-top: 20px;
+    font-weight: bold;
+    font-size: 12px;
+    color: #d6e6f2;
+    letter-spacing: 1px;
+}
+
+.Info-panel ul {
+list-style: none;
+margin-top: 15px;
+}
+
+.Info-panel ul li {
+    margin: 12px 0;
+}
+
+.Info-panel ul li a {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    text-decoration: none;
+    color: black;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+.Info-panel ul li a:hover {
+    background-color: #003366;
+}
+
+.Info-panel ul li img {
+    width: 22px;
+    height: 22px;
+    margin-right: 12px;
+}
+
+ /* Main Content Panel */
+.CRUD-panel {
+    display: flex;
+    width: 80vw;
+    flex-direction: column;
+    padding: 10px;
+    background-color: white;
+    /*border-radius: 12px;*/
+    /*box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);*/
+    overflow-y: auto;
+}
+
+.title{
+    width: 100%;
+    text-align: center;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 12px;
+    font-size: 15px;
+    background-color: #004b8d;
+    color: white;
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+}
+
+/* ========== DOCTOR'S NAVBAR ========== */
+.doctor-navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #004b8d; /* Dark blue theme */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+}
+
+/* Navbar styling */
+.info-container {
+    display: flex;
+    width: 300px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px;
+}
+
+/* Doctor Profile Styling */
+.doctor-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.doctor-img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Dropdown Container */
+.dropdown {
+    position: relative;
+}
+
+/* Dropdown Toggle Button */
+.dropdown-toggle {
+    background: none;
+    border: none;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    display: none;
+    flex-direction: column;
+    width: 150px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Show dropdown on hover */
+.dropdown:hover .dropdown-menu {
+    display: flex;
+}
+
+/* Dropdown Item Styling */
+.dropdown-item {
+    padding: 10px;
+    text-decoration: none;
+    color: #333;
+    display: block;
+}
+
+.dropdown-item:hover {
+    background-color: #f1f1f1;
+}
