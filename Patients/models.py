@@ -1,0 +1,119 @@
+from django.db import models
+
+#  Patient Model (FHIR-Compatible)
+class Patient(models.Model):
+    patient_id = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=255)
+    gender = models.CharField(max_length=10, choices=[
+        ("male", "Male"), ("female", "Female"), ("other", "Other")
+    ])
+    birth_date = models.DateField(null=True, blank=True)
+    national_id = models.CharField(max_length=50, unique=True)
+    last_arrived = models.DateField(null=True, blank=True)  # Last visit date
+
+    def __str__(self):
+        return f"{self.name} ({self.patient_id})"
+
+#  Practitioner Model
+class Practitioner(models.Model):
+    practitioner_id = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=255)
+    role = models.CharField(max_length=50, choices=[
+        ("doctor", "Doctor"), ("nurse", "Nurse"),
+        ("technician", "Technician"), ("admin", "Admin")
+    ])
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(unique=True)
+    hospital_affiliation = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.name} - {self.role}"
+
+#  Encounter Model (Merged)
+class Encounter(models.Model):
+    encounter_id = models.CharField(max_length=100, unique=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    practitioner = models.ForeignKey(Practitioner, on_delete=models.SET_NULL, null=True)
+    encounter_type = models.CharField(max_length=50, choices=[
+        ("inpatient", "Inpatient"), ("outpatient", "Outpatient"),
+        ("emergency", "Emergency"), ("telehealth", "Telehealth")
+    ])
+    status = models.CharField(max_length=20, choices=[
+        ("planned", "Planned"), ("in-progress", "In Progress"),
+        ("completed", "Completed"), ("cancelled", "Cancelled")
+    ])
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Encounter {self.encounter_id} - {self.patient.name} ({self.encounter_type})"
+
+#  Observation Model
+class Observation(models.Model):
+    observation_id = models.CharField(max_length=100, unique=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    encounter = models.ForeignKey(Encounter, on_delete=models.SET_NULL, null=True, blank=True)
+    category = models.CharField(max_length=50, choices=[
+        ("vital-signs", "Vital Signs"), ("laboratory", "Laboratory"),
+        ("imaging", "Imaging"), ("social-history", "Social History"),
+        ("diagnostic", "Diagnostic")
+    ])
+    observation_type = models.CharField(max_length=255)  # e.g., "Blood Pressure"
+    value = models.CharField(max_length=100)  # e.g., "120/80 mmHg"
+    unit = models.CharField(max_length=50, blank=True, null=True)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.patient.name} - {self.observation_type}: {self.value} {self.unit}"
+
+#  Pending Sync Queue (FHIR Data Sync)
+class PendingSyncQueue(models.Model):
+    resource_type = models.CharField(max_length=50, choices=[
+        ("Patient", "Patient"), ("Practitioner", "Practitioner"),
+        ("Encounter", "Encounter"), ("Observation", "Observation")
+    ])
+    resource_id = models.CharField(max_length=100)
+    json_data = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=10, default="pending")
+
+    def __str__(self):
+        return f"{self.resource_type} {self.resource_id} - {self.status}"
+
+#  Condition (FHIR-Compatible Medical Record)
+class Condition(models.Model):
+    condition_id = models.AutoField(primary_key=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    encounter = models.ForeignKey(Encounter, on_delete=models.SET_NULL, blank=True, null=True)
+    recorded_date = models.DateTimeField(blank=True, null=True)
+    recorder = models.ForeignKey(Practitioner, on_delete=models.SET_NULL, blank=True, null=True)
+    
+    diagnosis = models.TextField()
+    severity = models.CharField(max_length=100, blank=True, null=True)
+    clinical_status = models.CharField(max_length=100, blank=True, null=True)
+    verification_status = models.CharField(max_length=100, blank=True, null=True)
+    
+    onset = models.CharField(max_length=255, blank=True, null=True)
+    abatement = models.CharField(max_length=255, blank=True, null=True)
+
+    allergies = models.TextField(blank=True, null=True)
+    medications = models.TextField(blank=True, null=True)
+    test_results = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Condition {self.condition_id} - {self.patient.name}"
+
+#  Appointment Model
+
+class Appointment(models.Model):
+    appointment_id = models.AutoField(primary_key=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    practitioner = models.ForeignKey(Practitioner, on_delete=models.SET_NULL, null=True)
+    appointment_date = models.DateTimeField()
+    notes = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=10, choices=[
+        ('Completed', 'Completed'), ('Scheduled', 'Scheduled'), ('Cancelled', 'Cancelled')
+    ], default='Scheduled')
+
+    def __str__(self):
+        return f"Appointment {self.appointment_id} - {self.patient.name}"

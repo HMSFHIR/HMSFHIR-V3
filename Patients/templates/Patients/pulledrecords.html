@@ -1,0 +1,51 @@
+{% extends "Patients/main.html" %}
+{% load static %}
+{% block PageName %}Pulled Records{% endblock PageName %}
+
+{% block content %}
+<h1>Inspect Pulled Patient Data</h1>
+{% if error %}
+    <p>{{ error }}</p>
+{% else %}
+    <form method="post" action="{% url 'save_pulled_patient' %}">
+        {% csrf_token %}
+        <p>Patient ID: {{ patient_id }}</p>
+        <input type="hidden" name="patient_id" value="{{ patient_id }}">
+        <p>Identifier: {{ identifier }}</p>
+        <input type="hidden" name="identifier" value="{{ identifier }}">
+        <p>First Name: {{ first_name }}</p>
+        <input type="hidden" name="first_name" value="{{ first_name }}">
+        <p>Last Name: {{ last_name }}</p>
+        <input type="hidden" name="last_name" value="{{ last_name }}">
+        <p>Birth Date: {{ birth_date }}</p>
+        <input type="hidden" name="birth_date" value="{{ birth_date }}">
+        <p>Gender: {{ gender }}</p>
+        <input type="hidden" name="gender" value="{{ gender }}">
+        <p>Address: {{ address }}</p>
+        <input type="hidden" name="address" value="{{ address }}">
+        <p>Phone Number: {{ phone_number }}</p>
+        <input type="hidden" name="phone_number" value="{{ phone_number }}">
+        
+        <h2>Condition Details</h2>
+        <p>ID: {{ condition_details.id }}</p>
+        <p>Clinical Status: {{ condition_details.clinical_status }}</p>
+        <p>Verification Status: {{ condition_details.verification_status }}</p>
+        <p>Category: {{ condition_details.category }}</p>
+        <p>Severity: {{ condition_details.severity }}</p>
+        <p>Code: {{ condition_details.code }}</p>
+        <p>Subject: {{ condition_details.subject }}</p>
+        <p>Encounter: {{ condition_details.encounter }}</p>
+        <p>Onset: {{ condition_details.onset }}</p>
+        <p>Abatement: {{ condition_details.abatement }}</p>
+        <p>Recorded Date: {{ condition_details.recorded_date }}</p>
+        <p>Recorder: {{ condition_details.recorder }}</p>
+        <p>Asserter: {{ condition_details.asserter }}</p>
+        <p>Stage: {{ condition_details.stage }}</p>
+        <p>Evidence: {{ condition_details.evidence }}</p>
+        <p>Note: {{ condition_details.note }}</p>
+        
+        <input type="hidden" name="condition_details" value="{{ condition_details }}">
+        <button type="submit">Save Patient Data</button>
+    </form>
+{% endif %}
+{% endblock %}

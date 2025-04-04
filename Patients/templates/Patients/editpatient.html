@@ -1,0 +1,17 @@
+<!-- filepath: d:\HMS_FHIR\core\Patients\templates\Patients\editpatient.html -->
+{% extends "Patients/main.html" %}
+{% load static %}
+
+{% block PageName %}
+    Edit Patient
+{% endblock %}
+
+{% block content %}
+<h2>Edit Patient</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ patient_form.as_p }}
+    <button type="submit">Save Changes</button>
+</form>
+<a href="{% url 'PatientList' %}">Back to Patient List</a>
+{% endblock %}

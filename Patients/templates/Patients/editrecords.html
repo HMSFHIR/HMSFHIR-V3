@@ -1,0 +1,15 @@
+{% extends "Patients/main.html" %}
+{% load static %}
+
+{% block PageName %}
+    Edit Medical Record
+{% endblock %}
+
+{% block content %}
+<h2>Edit Medical Record</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ medicalrecords_form.as_p }}
+    <button type="submit">Save changes</button>
+</form>
+{% endblock %}

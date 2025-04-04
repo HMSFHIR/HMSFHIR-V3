@@ -1,0 +1,15 @@
+{% extends "Patients/main.html" %}
+{% load static %}
+
+{% block PageName %}
+    Edit Appointment
+{% endblock %}
+
+{% block content %}
+<h2>Edit Appointment</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ appointment_form.as_p }}
+    <button type="submit">Save changes</button>
+</form>
+{% endblock %}

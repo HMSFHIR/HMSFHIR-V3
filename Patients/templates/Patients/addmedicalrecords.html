@@ -1,0 +1,11 @@
+{% extends "Patients/main.html" %}
+
+{% block PageName %}New Patient{% endblock PageName %}
+
+{% block content %}
+    <form method="post">
+        {% csrf_token %}
+        {{medicalrecords_form.as_p}}
+        <button type="submit">Add Patient and Appointment</button>
+    </form>
+{% endblock %}

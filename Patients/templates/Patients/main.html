@@ -1,0 +1,76 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patients</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'Patients/home.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'Patients/main.css' %}">
+</head>
+<body>
+    <main>
+        <!-- Sidebar (Information Panel) -->
+        <section class="Info-panel">
+            <div class="title">
+                <img src="#" alt="#"/>
+                <b>HMS+FHIR</b>
+            </div>
+            <p>Clinic Name</p>
+            <div class="Dashboard">
+                <a href=""><img src="#" alt="#"/> Dashboard</a>
+            </div>
+            <nav>
+                <p>CLINIC</p>
+                <ul>
+                    <li><a href={% url "PatientList" %}><img src="#" alt="#"/> Patients</a></li>
+                    <li><a href={% url 'Appointment' %}><img src="#" alt="#"/> Appointments</a></li>
+                    <li><a href={% url "MedicalRecord" %}><img src="#" alt="#"/> Medical Records</a></li>
+                    <li><a href={% url "FHIRSync" %}><img src="#" alt="#"/> FHIR Sync</a></li>
+                </ul>
+            </nav>
+            
+        </section>
+
+        <!-- Main Content Area -->
+        <section class="CRUD-panel">
+            <!-- 🔹 Doctor's Navbar -->
+            <div class="doctor-navbar">
+                <div class="PageName">
+                    <b>{% block PageName %}{% endblock %}</b>
+                </div>
+
+                <section class="info-container">
+                    <div class="doctor-info">
+                        <img src="{% static 'images/doctor-placeholder.jpg' %}" alt="Doctor Profile" class="doctor-img"/>
+                        <b>Dr. John Doe</b> <!-- Replace with dynamic doctor name -->
+                    </div>
+                    
+                    <div class="dropdown">
+                        <button class="dropdown-toggle">⚙️</button>
+                        <div class="dropdown-menu">
+                            <a href="#" class="dropdown-item">Settings</a>
+                            <a href="#" class="dropdown-item">Logout</a>
+                        </div>
+                    </div>
+                </section>
+                
+
+                <!-- 🔹 Page Name Block -->
+                
+            </div>
+
+            
+
+            <!-- 🔹 Main Content -->
+            {% block content %}
+            {% endblock %}
+        </section>
+    </main>
+    
+    <footer>
+        <p> 2025 HMSFHIR.&copy;</p>
+    </footer>
+    
+</body>
+</html>

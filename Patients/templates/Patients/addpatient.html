@@ -1,0 +1,13 @@
+{% extends "Patients/main.html" %}
+{% block PageName %}Add New Patient{% endblock %}
+
+{% block content %}
+    <h2>Add New Patient</h2>
+    <form method="post" class="form-container">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-add">Save Patient</button>
+    </form>
+    <br>
+    <a href="{% url 'PatientList' %}" class="btn btn-back">Back to Patients</a>
+{% endblock %}
