@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db import IntegrityError
 # from .fhir_service import get_patient, get_patient_condition, get_patient_with_condition
 from django.views.decorators.csrf import csrf_exempt
-from datetime import datetime
+from datetime import date
 from rest_framework import viewsets
 from .models import Patient, Practitioner, Encounter, Observation, Appointment, Condition
 from .serializers import PatientSerializer, PractitionerSerializer, EncounterSerializer, ObservationSerializer
