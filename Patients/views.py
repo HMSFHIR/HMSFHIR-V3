@@ -77,7 +77,7 @@ def add_patient(request):
     else:
         form = PatientForm()
 
-    return render(request, "Patients/add_patient.html", {"form": form})
+    return render(request, "Patients/addpatient.html", {"form": form})
 
 
 #view for editing patients

@@ -10,6 +10,7 @@ urlpatterns = [
     path("patients/add/", views.add_patient, name="add_patient"),
     path("patients/edit/<str:patient_id>/", views.EditPatient, name="EditPatient"),
     path("patients/<str:patient_id>/summary/", views.ViewRecordsSummary, name="ViewRecordsSummary"),
+    path('patients/add/', views.add_patient, name='add_patient'),
 ]
 
 

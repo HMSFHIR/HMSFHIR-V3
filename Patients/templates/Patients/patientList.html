@@ -8,19 +8,8 @@
 {% block content %}
 <!-- Operations Section -->
 <section class="operations">
-    <!-- New Patient Form -->
-    <form method="post" action="{% url 'add_patient' %}" class="patient-form">
-        {% csrf_token %}
-        <input type="text" name="name" placeholder="Full Name" required>
-        <select name="gender">
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-        </select>
-        <input type="date" name="birth_date">
-        <input type="text" name="national_id" placeholder="National ID" required>
-        <button type="submit" class="btn btn-add">Add Patient</button>
-    </form>
+    <!-- Button to go to the Add Patient page -->
+    <a href="{% url 'add_patient' %}" class="btn btn-add">+ Add New Patient</a>
 </section>
 
 <!-- Patients Table -->
