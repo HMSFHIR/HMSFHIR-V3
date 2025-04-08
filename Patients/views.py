@@ -8,6 +8,9 @@ from .models import Patient, Practitioner, Encounter, Observation, Appointment, 
 from .serializers import PatientSerializer, PractitionerSerializer, EncounterSerializer, ObservationSerializer
 from .forms import PatientForm
 from django.utils.crypto import get_random_string
+from django.db.models import Q
+
+from django.http import JsonResponse
 
 
 #These ViewSets are for handling API endpoints 
@@ -40,10 +43,24 @@ def Dashboard(request):
     context = {'Appointments': appointments}
     return render(request, "Patients/dashboard.html", context)
 
+
+
+
 def PatientList(request):
-    Patients = Patient.objects.all()
+    query = request.GET.get('q')
+    if query:
+        Patients = Patient.objects.filter(
+            Q(name__icontains=query) |
+            Q(patient_id__icontains=query) |
+            Q(national_id__icontains=query) |
+            Q(gender__icontains=query)
+        )
+    else:
+        Patients = Patient.objects.all()
+
     context = {'Patients': Patients}
     return render(request, 'Patients/patientList.html', context)
+    
 
 def AppointmentView(request):
     Appointments = Appointment.objects.all()
@@ -137,3 +154,12 @@ def ViewRecordsSummary(request, patient_id):
     }
 
     return render(request, "Patients/patientsummary.html", context)
+
+def DeletePatient(request, patient_id):
+    try:
+        patient = Patient.objects.get(patient_id=patient_id)
+        patient.delete()
+    except Patient.DoesNotExist:
+        # Optionally, handle the error (e.g., flash message)
+        pass
+    return redirect('PatientList')

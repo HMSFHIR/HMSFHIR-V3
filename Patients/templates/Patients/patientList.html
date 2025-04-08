@@ -8,12 +8,22 @@
 {% block content %}
 <!-- Operations Section -->
 <section class="operations">
-    <!-- Button to go to the Add Patient page -->
+
+        <!-- Add Patient Button -->
     <a href="{% url 'add_patient' %}" class="btn btn-add">+ Add New Patient</a>
+
+    <!-- Search Form -->
+    <form method="get" action="{% url 'PatientList' %}" class="search-form">
+        <div>
+            <input type="text" name="q" placeholder="Search by name or ID..." value="{{ request.GET.q }}">
+            <button type="submit">🔍</button>
+        </div>
+    </form>
+   
 </section>
 
 <!-- Patients Table -->
-<table class="patients-table">
+<table class="patients-table" id="patientsTable">
     <thead>
         <tr>
             <th>🚮</th>
@@ -29,10 +39,9 @@
         {% for Patient in Patients %}
             <tr>
                 <td>
-                    <form method="post" action="#">
+                    <form method="post" action="{% url 'delete_patient' Patient.patient_id %}">
                         {% csrf_token %}
-                        <input type="hidden" name="patient_ids" value="{{ Patient.patient_id }}">
-                        <button type="submit" class="btn btn-delete" onclick="return confirm('Delete {{Patient.name}}?')">🗑️</button>
+                        <button type="submit" class="btn btn-delete" onclick="return confirm('Delete {{ Patient.name }}?')">🗑️</button>
                     </form>
                 </td>
                 <td>{{ Patient.name }}</td>
@@ -48,4 +57,8 @@
         {% endfor %}
     </tbody>
 </table>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/patientSearch.js' %}"></script>
 {% endblock %}

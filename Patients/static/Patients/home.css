@@ -185,3 +185,30 @@ button:hover {
     }
 }
 
+.search-form {
+    display: inline-block;
+    margin-left: 1rem;
+}
+
+.search-input {
+    padding: 6px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.btn-search {
+    padding: 6px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+
+.operations form div{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
