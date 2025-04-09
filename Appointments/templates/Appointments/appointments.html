@@ -4,7 +4,7 @@
 
 {% block content %}
     <section class="operations">
-        <a href={% url "add_appointment" %} class="newPatient">Add Appointment</a>
+        <a href="{% url 'add_appointment' %}" class="newPatient">Add Appointment</a>
     </section>
     <nav class="navbar-top"></nav>
 
@@ -23,31 +23,31 @@
             </tr>
         </thead>
         <tbody>
-            {% for Appointment in Appointments %}
+            {% for appointment in appointments %}
                 <tr>
                     <td>
-                        <form method="post" action="{% url 'delete_appointment' Appointment.AppointmentID %}" style="display:inline;">
+                        <form method="post" action="{% url 'delete_appointment' appointment.id %}" style="display:inline;">
                             {% csrf_token %}
-                            <input type="hidden" name="patient_ids" value="{{ Appointment.Patient.PatientID }}">
-                            <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure you want to delete this Appointment: ID &nbsp; {{Appointment.AppointmentID}}?')">🗑️</button>
+                            <input type="hidden" name="patient_id" value="{{ appointment.patient.id }}">
+                            <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure you want to delete Appointment #{{ appointment.id }}?')">🗑️</button>
                         </form>
                     </td>
 
-                    <td class="patient-id">{{Appointment.AppointmentID}}</td>
+                    <td class="patient-id">{{ appointment.id }}</td>
 
-                    <td class="patient-name">{{Appointment.Patient.Fhir_ID}}</td>
+                    <td class="patient-name">{{ appointment.patient.fhir_id }}</td>
 
                     <td class="patient-gender">OPD</td>
 
-                    <td class="patient-nid">{{ Appointment.Patient.P_National_ID }}</td>
+                    <td class="patient-nid">{{ appointment.patient.national_id }}</td>
 
-                    <td class="patient-id">{{Appointment.Doctor_Name}}</td>
-                    <td class="patient-id">{{Appointment.Appointment_Status}}</td>
+                    <td class="patient-id">{{ appointment.practitioner }}</td>
+                    <td class="patient-id">{{ appointment.status }}</td>
 
-                    <td class="patient-date">{{ Appointment.Appointment_Date }}</td>
+                    <td class="patient-date">{{ appointment.appointment_date }}</td>
                     <td class="patient-actions">
-                        <a href={% url "view_appointments" Appointment.Patient.PatientID %} class="btn btn-add">+</a>
-                        <a href={% url "edit_appointment" Appointment.AppointmentID %} class="btn btn-edit">E</a>
+                        <a href="{% url 'view_appointments' appointment.patient.id %}" class="btn btn-add">+</a>
+                        <a href="{% url 'edit_appointment' appointment.id %}" class="btn btn-edit">E</a>
                     </td>
                 </tr>
             {% endfor %}
