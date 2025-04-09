@@ -44,8 +44,6 @@ def Dashboard(request):
     return render(request, "Patients/dashboard.html", context)
 
 
-
-
 def PatientList(request):
     query = request.GET.get('q')
     if query:
