@@ -1,0 +1,43 @@
+{% extends "Patients/main.html" %}
+
+{% block PageName %}Appointments{% endblock PageName %}
+
+{% block content %}
+    <section class="operations">
+        <a href="{% url 'add_appointment' %}" class="newPatient">Add Appointment</a>
+    </section>
+
+    <table class="patients-table">
+        <thead>
+            <tr>
+                <th>Actions</th>
+                <th>Appointment ID</th>
+                <th>Patient</th>
+                <th>Practitioner</th>
+                <th>Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for appointment in appointments %}
+                <tr>
+                    <td class="patient-actions">
+                        <form method="post" action="{% url 'delete_appointment' appointment.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-delete" 
+                                    onclick="return confirm('Delete appointment #{{ appointment.id }}?')">
+                                🗑️
+                            </button>
+                        </form>
+                        <a href="#" class="btn btn-edit">Edit</a>
+                    </td>
+                    <td>{{ appointment.id }}</td>
+                    <td>{{ appointment.patient }}</td>
+                    <td>{{ appointment.practitioner }}</td>
+                    <td>{{ appointment.appointment_date }}</td>
+                    <td>{{ appointment.status }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
