@@ -1,0 +1,51 @@
+{% extends "Patients/main.html" %}
+
+{% block PageName %}Add Appointment{% endblock PageName %}
+
+{% block content %}
+    <section class="operations">
+        <a href="{% url 'Appointment' %}" class="btn btn-back">← Back to Appointments</a>
+    </section>
+
+    <div class="form-container">
+        <h2>Add New Appointment</h2>
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                {{ form.patient.label_tag }}
+                {{ form.patient }}
+                {{ form.patient.errors }}
+            </div>
+
+            <div class="form-group">
+                {{ form.practitioner.label_tag }}
+                {{ form.practitioner }}
+                {{ form.practitioner.errors }}
+            </div>
+
+            <div class="form-group">
+                {{ form.appointment_date.label_tag }}
+                {{ form.appointment_date }}
+                {{ form.appointment_date.errors }}
+            </div>
+
+            <div class="form-group">
+                {{ form.status.label_tag }}
+                {{ form.status }}
+                {{ form.status.errors }}
+            </div>
+
+            <div class="form-group">
+                {{ form.notes.label_tag }}
+                {{ form.notes }}
+                {{ form.notes.errors }}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-save">Save Appointment</button>
+                <a href="{% url 'Appointment' %}" class="btn btn-cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

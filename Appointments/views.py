@@ -1,14 +1,15 @@
-from django.shortcuts import render, redirect
+# Appointments/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db import IntegrityError
 from .models import Appointment
 from .forms import AppointmentForms
-from django.db import IntegrityError
-from Patients.models import Patient
+from . import views
 
-# Create your views here.
 def AppointmentView(request):
-    Appointments = Appointment.objects.all()
-    context = {'Appointments' : Appointments }
-    return render(request, "Appointments/appointments.html", context)
+    appointments = Appointment.objects.all().order_by('-appointment_date')
+    return render(request, 'Appointments/appointments.html', {
+        'appointments': appointments
+    })
 
 def AddAppointment(request):
     if request.method == 'POST':
@@ -16,17 +17,21 @@ def AddAppointment(request):
         if form.is_valid():
             try:
                 form.save()
-                return redirect('Appointment')  
+                return redirect('Appointment')
             except IntegrityError as e:
-                form.add_error(None, "This appointment conflicts with an existing one")
-        # If form is invalid or save fails, render form with errors
+                form.add_error(None, f"Database error: {str(e)}")
     else:
         form = AppointmentForms()
     
-    return render(request, 'Appointments/add_appointment.html', {'form': form})
+    return render(request, 'Appointments/add_appointment.html', {
+        'form': form
+    })
 
 def DeleteAppointment(request, appointment_id):
-    appointment = get_object_or_404(Appointment, AppointmentID=appointment_id)
-    patient_id = appointment.Patient.PatientID
-    appointment.delete()
-    return redirect('view_summary', patient_id=patient_id)
+    appointment = get_object_or_404(Appointment, pk=appointment_id)
+    if request.method == 'POST':
+        appointment.delete()
+        return redirect('appointment_list')
+    return render(request, 'Appointments/confirm_delete.html', {
+        'appointment': appointment
+    })

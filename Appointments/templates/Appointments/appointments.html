@@ -6,49 +6,36 @@
     <section class="operations">
         <a href="{% url 'add_appointment' %}" class="newPatient">Add Appointment</a>
     </section>
-    <nav class="navbar-top"></nav>
 
     <table class="patients-table">
         <thead>
             <tr>
-                <th>🗑️</th>
-                <th>Appointment ID</th>
-                <th>FHIR ID</th>
-                <th>Department</th>
-                <th>National ID</th>
-                <th>Doctor</th>
-                <th>Status</th>
-                <th>Appointment Date</th>
                 <th>Actions</th>
+                <th>Appointment ID</th>
+                <th>Patient</th>
+                <th>Practitioner</th>
+                <th>Date</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
             {% for appointment in appointments %}
                 <tr>
-                    <td>
-                        <form method="post" action="{% url 'delete_appointment' appointment.id %}" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="patient_id" value="{{ appointment.patient.id }}">
-                            <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure you want to delete Appointment #{{ appointment.id }}?')">🗑️</button>
-                        </form>
-                    </td>
-
-                    <td class="patient-id">{{ appointment.id }}</td>
-
-                    <td class="patient-name">{{ appointment.patient.fhir_id }}</td>
-
-                    <td class="patient-gender">OPD</td>
-
-                    <td class="patient-nid">{{ appointment.patient.national_id }}</td>
-
-                    <td class="patient-id">{{ appointment.practitioner }}</td>
-                    <td class="patient-id">{{ appointment.status }}</td>
-
-                    <td class="patient-date">{{ appointment.appointment_date }}</td>
                     <td class="patient-actions">
-                        <a href="{% url 'view_appointments' appointment.patient.id %}" class="btn btn-add">+</a>
-                        <a href="{% url 'edit_appointment' appointment.id %}" class="btn btn-edit">E</a>
+                        <form method="post" action="{% url 'delete_appointment' appointment.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-delete" 
+                                    onclick="return confirm('Delete appointment #{{ appointment.id }}?')">
+                                🗑️
+                            </button>
+                        </form>
+                        <a href="#" class="btn btn-edit">Edit</a>
                     </td>
+                    <td>{{ appointment.id }}</td>
+                    <td>{{ appointment.patient }}</td>
+                    <td>{{ appointment.practitioner }}</td>
+                    <td>{{ appointment.appointment_date }}</td>
+                    <td>{{ appointment.status }}</td>
                 </tr>
             {% endfor %}
         </tbody>
