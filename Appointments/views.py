@@ -31,7 +31,27 @@ def DeleteAppointment(request, appointment_id):
     appointment = get_object_or_404(Appointment, pk=appointment_id)
     if request.method == 'POST':
         appointment.delete()
-        return redirect('appointment_list')
+        return redirect('Appointment')
     return render(request, 'Appointments/confirm_delete.html', {
+        'appointment': appointment
+    })
+
+
+def EditAppointment(request, appointment_id):
+    appointment = get_object_or_404(Appointment, AppointmentID=appointment_id)
+
+    if request.method == 'POST':
+        appointment_form = AppointmentForm(request.POST, instance=appointment)
+        if appointment_form.is_valid():
+            try:
+                appointment_form.save()
+                return redirect('view_appointments', patient_id=appointment.Patient.PatientID)
+            except IntegrityError as e:
+                appointment_form.add_error(None, f'Database error: {e}')
+    else:
+        appointment_form = AppointmentForm(instance=appointment)
+
+    return render(request, 'Appointments/editappointment.html', {
+        'appointment_form': appointment_form,
         'appointment': appointment
     })

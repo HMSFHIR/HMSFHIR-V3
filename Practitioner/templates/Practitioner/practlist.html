@@ -1,10 +1,10 @@
 {% extends "Patients/main.html" %}
 
-{% block PageName %}Appointments{% endblock PageName %}
+{% block PageName %}Practitioners{% endblock PageName %}
 
 {% block content %}
     <section class="operations">
-        <a href="{% url 'add_appointment' %}" class="newPatient">Add Appointment</a>
+        <a href="{% url 'NewPractitioner' %}" class="newPatient">Add Practitioner</a>
     </section>
 
     <table class="patients-table">
