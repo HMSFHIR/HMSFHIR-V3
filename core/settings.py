@@ -37,11 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'Patients',
     'rest_framework',
     'Appointments',
     'Practitioner',
     'fhir_sync',
+    'Patients.apps.PatientsConfig',
 ]
 
 # FHIR SERVER BASE URL

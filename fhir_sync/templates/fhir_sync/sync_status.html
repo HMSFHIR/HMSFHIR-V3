@@ -10,10 +10,15 @@
     <h2>🔁 FHIR Sync Status</h2>
     {% if server_connected %}
         <p style="color:green;">✅ Successfully connected to the FHIR server.</p>
+
+        <!-- 🔘 Sync Now Button -->
+        <form method="post" action="{% url 'manual_sync' %}">
+            {% csrf_token %}
+            <button type="submit" class="sync-button">🔁 Sync Now</button>
+        </form>
     {% else %}
         <p style="color:red;">⚠️ Unable to connect to the FHIR server. Please check the server status.</p>
     {% endif %}
-
 </section>
 
 <h3>⏳ Pending Resources</h3>

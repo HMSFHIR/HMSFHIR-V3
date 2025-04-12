@@ -1,34 +1,32 @@
-from django.shortcuts import render
-from .models import PendingSyncQueue
+from django.shortcuts import render,redirect
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .services import sync_pending_resources
 from django.conf import settings
 import requests
-from django.shortcuts import render
 from .models import PendingSyncQueue
+from django.views.decorators.csrf import csrf_exempt
+from Patients.sync_logic import run_sync
+
 
 def sync_status_view(request):
     try:
-        response = requests.get('http://localhost:8080/fhir/metadata')
-        fhir_connection_status = response.status_code == 200
+        # 🔌 Simple check to test FHIR server connectivity (you can adjust this)
+        response = requests.get("http://localhost:8080/fhir/metadata", timeout=3)
+        server_connected = response.status_code == 200
     except requests.RequestException:
-        fhir_connection_status = False
+        server_connected = False
 
-    pending_tasks = PendingSyncQueue.objects.filter(status='pending')
-    synced_tasks = PendingSyncQueue.objects.exclude(status='pending')
+    # ⏳ Get pending + synced tasks
+    pending_tasks = PendingSyncQueue.objects.filter(status="pending").order_by("-created_at")
+    synced_tasks = PendingSyncQueue.objects.exclude(status="pending").order_by("-created_at")
 
     context = {
-    'pending_tasks': pending_tasks,
-    'synced_tasks': synced_tasks,
-    'server_connected': fhir_connection_status,  
-}
-
-
-    return render(request, 'fhir_sync/sync_status.html', context)
-
-
-
+        "server_connected": server_connected,
+        "pending_tasks": pending_tasks,
+        "synced_tasks": synced_tasks,
+    }
+    return render(request, "fhir_sync/sync_status.html", context)
 
 def sync_queue_view(request):
     try:
@@ -45,3 +43,12 @@ def sync_queue_view(request):
         "synced_tasks": synced_tasks,
         "fhir_connection_status": fhir_connection_status
     })
+
+@csrf_exempt
+def manual_sync_view(request):
+    if request.method == "POST":
+        run_sync()
+        return redirect("sync-status")  # Name of your sync status URL
+
+    # Optional GET handler if needed
+    return redirect("sync-status")
