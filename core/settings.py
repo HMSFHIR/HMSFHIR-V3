@@ -37,12 +37,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'Patients',
     'rest_framework',
     'Appointments',
     'Practitioner',
     'fhir_sync',
+    'Patients.apps.PatientsConfig',
 ]
+
+# FHIR SERVER BASE URL
+FHIR_SERVER_BASE_URL = "http://localhost:8080/fhir"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -1,5 +1,6 @@
 from django.db import models
 from Practitioner.models import Practitioner
+from datetime import date
 
 #  Patient Model (FHIR-Compatible)
 class Patient(models.Model):
@@ -11,6 +12,43 @@ class Patient(models.Model):
     birth_date = models.DateField(null=True, blank=True)
     national_id = models.CharField(max_length=50, unique=True)
     last_arrived = models.DateField(null=True, blank=True)  # Last visit date
+
+
+
+    def to_json(self):
+        name_parts = self.name.split()
+        family = name_parts[-1] if len(name_parts) > 1 else self.name
+        given = name_parts[:-1] if len(name_parts) > 1 else []
+
+        return {
+        "resourceType": "Patient",
+        "id": self.patient_id,
+        "identifier": [
+            {
+                "use": "official",
+                "type": {
+                    "text": "National ID"
+                },
+                "value": self.national_id,
+                "system": "http://example.org/national-id"
+            }
+        ],
+        "name": [
+            {
+                "use": "official",
+                "family": family,
+                "given": given
+            }
+        ],
+        "gender": self.gender,
+        "birthDate": self.birth_date.isoformat() if self.birth_date else None,
+        "extension": [
+            {
+                "url": "http://example.org/fhir/StructureDefinition/last-arrived",
+                "valueDate": self.last_arrived.isoformat() if self.last_arrived else date.today().isoformat()
+            }
+        ]
+    }
 
     def __str__(self):
         return f"{self.name} ({self.patient_id})"
@@ -53,20 +91,6 @@ class Observation(models.Model):
     def __str__(self):
         return f"{self.patient.name} - {self.observation_type}: {self.value} {self.unit}"
 
-#  Pending Sync Queue (FHIR Data Sync)
-class PendingSyncQueue(models.Model):
-    resource_type = models.CharField(max_length=50, choices=[
-        ("Patient", "Patient"), ("Practitioner", "Practitioner"),
-        ("Encounter", "Encounter"), ("Observation", "Observation")
-    ])
-    resource_id = models.CharField(max_length=100)
-    json_data = models.JSONField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=10, default="pending")
-
-    def __str__(self):
-        return f"{self.resource_type} {self.resource_id} - {self.status}"
-
 #  Condition (FHIR-Compatible Medical Record)
 class Condition(models.Model):
     condition_id = models.AutoField(primary_key=True)
@@ -90,17 +114,3 @@ class Condition(models.Model):
     def __str__(self):
         return f"Condition {self.condition_id} - {self.patient.name}"
 
-#  Appointment Model
-
-class Appointment(models.Model):
-    appointment_id = models.AutoField(primary_key=True)
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    practitioner = models.ForeignKey(Practitioner, on_delete=models.SET_NULL, null=True)
-    appointment_date = models.DateTimeField()
-    notes = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=10, choices=[
-        ('Completed', 'Completed'), ('Scheduled', 'Scheduled'), ('Cancelled', 'Cancelled')
-    ], default='Scheduled')
-
-    def __str__(self):
-        return f"Appointment {self.appointment_id} - {self.patient.name}"
