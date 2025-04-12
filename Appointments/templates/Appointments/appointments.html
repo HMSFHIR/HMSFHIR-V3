@@ -22,14 +22,14 @@
             {% for appointment in appointments %}
                 <tr>
                     <td class="patient-actions">
-                        <form method="post" action="{% url 'delete_appointment' appointment.id %}">
+                        <form method="post" action="{% url 'DeleteAppointment' appointment.appointment_id %}">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-delete" 
-                                    onclick="return confirm('Delete appointment #{{ appointment.id }}?')">
+                                    onclick="return confirm('Delete appointment #{{ appointment.appointment_id }}?')">
                                 🗑️
                             </button>
                         </form>
-                        <a href="#" class="btn btn-edit">Edit</a>
+                        <a href="#" class="btn btn-edit" type="submit" onclick="{% url 'EditAppointment' appointment.appointment_id%}">Edit</a>
                     </td>
                     <td>{{ appointment.id }}</td>
                     <td>{{ appointment.patient }}</td>
