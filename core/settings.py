@@ -44,6 +44,9 @@ INSTALLED_APPS = [
     'fhir_sync',
 ]
 
+# FHIR SERVER BASE URL
+FHIR_SERVER_BASE_URL = "http://localhost:8080/fhir"
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

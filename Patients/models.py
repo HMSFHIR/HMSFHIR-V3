@@ -53,20 +53,6 @@ class Observation(models.Model):
     def __str__(self):
         return f"{self.patient.name} - {self.observation_type}: {self.value} {self.unit}"
 
-#  Pending Sync Queue (FHIR Data Sync)
-class PendingSyncQueue(models.Model):
-    resource_type = models.CharField(max_length=50, choices=[
-        ("Patient", "Patient"), ("Practitioner", "Practitioner"),
-        ("Encounter", "Encounter"), ("Observation", "Observation")
-    ])
-    resource_id = models.CharField(max_length=100)
-    json_data = models.JSONField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=10, default="pending")
-
-    def __str__(self):
-        return f"{self.resource_type} {self.resource_id} - {self.status}"
-
 #  Condition (FHIR-Compatible Medical Record)
 class Condition(models.Model):
     condition_id = models.AutoField(primary_key=True)
@@ -90,17 +76,3 @@ class Condition(models.Model):
     def __str__(self):
         return f"Condition {self.condition_id} - {self.patient.name}"
 
-#  Appointment Model
-
-class Appointment(models.Model):
-    appointment_id = models.AutoField(primary_key=True)
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    practitioner = models.ForeignKey(Practitioner, on_delete=models.SET_NULL, null=True)
-    appointment_date = models.DateTimeField()
-    notes = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=10, choices=[
-        ('Completed', 'Completed'), ('Scheduled', 'Scheduled'), ('Cancelled', 'Cancelled')
-    ], default='Scheduled')
-
-    def __str__(self):
-        return f"Appointment {self.appointment_id} - {self.patient.name}"

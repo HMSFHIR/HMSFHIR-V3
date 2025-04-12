@@ -1,0 +1,70 @@
+{% extends "Patients/main.html" %}
+{% load static %}
+
+{% block PageName %}
+    FHIR Sync Status
+{% endblock %}
+
+{% block content %}
+<section class="operations">
+    <h2>🔁 FHIR Sync Status</h2>
+    {% if server_connected %}
+        <p style="color:green;">✅ Successfully connected to the FHIR server.</p>
+    {% else %}
+        <p style="color:red;">⚠️ Unable to connect to the FHIR server. Please check the server status.</p>
+    {% endif %}
+
+</section>
+
+<h3>⏳ Pending Resources</h3>
+<table class="patients-table">
+    <thead>
+        <tr>
+            <th>Resource Type</th>
+            <th>Resource ID</th>
+            <th>Status</th>
+            <th>Queued At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for resource in pending_tasks %}
+        <tr>
+            <td>{{ resource.resource_type }}</td>
+            <td>{{ resource.resource_id }}</td>
+            <td>{{ resource.status }}</td>
+            <td>{{ resource.created_at }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">✅ No pending resources</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>✅ Synced Resources</h3>
+<table class="patients-table">
+    <thead>
+        <tr>
+            <th>Resource Type</th>
+            <th>Resource ID</th>
+            <th>Status</th>
+            <th>Synced At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for resource in synced_tasks %}
+        <tr>
+            <td>{{ resource.resource_type }}</td>
+            <td>{{ resource.resource_id }}</td>
+            <td>{{ resource.status }}</td>
+            <td>{{ resource.created_at }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">⚠️ No synced resources yet</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -4,11 +4,12 @@ from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_exempt
 from datetime import date
 from rest_framework import viewsets
-from .models import Patient, Practitioner, Encounter, Observation, Appointment, Condition
+from .models import Patient, Practitioner, Encounter, Observation, Condition
 from .serializers import PatientSerializer, PractitionerSerializer, EncounterSerializer, ObservationSerializer
 from .forms import PatientForm
 from django.utils.crypto import get_random_string
 from django.db.models import Q
+from Appointments.models import Appointment
 
 from django.http import JsonResponse
 
@@ -63,7 +64,7 @@ def PatientList(request):
 def AppointmentView(request):
     Appointments = Appointment.objects.all()
     context = {'Appointments' : Appointments }
-    return render(request, "Patients/appointments.html", context)
+    return render(request, "Appointments/appointments.html", context)
 
 def MedicalRecordView(request):
     context = {}
