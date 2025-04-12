@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'Appointments',
     'Practitioner',
+    'fhir_sync',
 ]
 
 MIDDLEWARE = [
