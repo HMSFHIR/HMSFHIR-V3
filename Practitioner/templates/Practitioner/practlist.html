@@ -11,31 +11,36 @@
         <thead>
             <tr>
                 <th>Actions</th>
-                <th>Appointment ID</th>
-                <th>Patient</th>
-                <th>Practitioner</th>
-                <th>Date</th>
-                <th>Status</th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Hospital Affiliation</th>
             </tr>
         </thead>
         <tbody>
-            {% for appointment in appointments %}
+            {% for practitioner in practitioners %}
                 <tr>
                     <td class="patient-actions">
-                        <form method="post" action="{% url 'DeleteAppointment' appointment.appointment_id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-delete" 
-                                    onclick="return confirm('Delete appointment #{{ appointment.appointment_id }}?')">
-                                🗑️
-                            </button>
-                        </form>
-                        <a href="#" class="btn btn-edit" type="submit" onclick="{% url 'EditAppointment' appointment.appointment_id%}">Edit</a>
+                            <!-- Edit button -->
+                            <a href="{% url 'EditPractitioner' practitioner.id %}" class="btn btn-edit">✏️ Edit</a>
+                        
+                            <!-- Delete button -->
+                            <form method="post" action="{% url 'DeletePractitioner' practitioner.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-delete" onclick="return confirm('Delete practitioner {{ practitioner.id }}?')">
+                                    🗑️ Delete
+                                </button>
+                            </form>
                     </td>
-                    <td>{{ appointment.id }}</td>
-                    <td>{{ appointment.patient }}</td>
-                    <td>{{ appointment.practitioner }}</td>
-                    <td>{{ appointment.appointment_date }}</td>
-                    <td>{{ appointment.status }}</td>
+                        
+                    <td>{{ practitioner.id }}</td>
+                    <td>{{ practitioner.name }}</td>
+                    <td>{{ practitioner.role }}</td>
+                    <td>{{ practitioner.phone }}</td>
+                    <td>{{ practitioner.email }}</td>
+                    <td>{{ practitioner.hospital_affiliation }}</td>
                 </tr>
             {% endfor %}
         </tbody>
