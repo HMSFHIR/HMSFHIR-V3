@@ -37,7 +37,7 @@
             <td>{{ resource.resource_type }}</td>
             <td>{{ resource.resource_id }}</td>
             <td>{{ resource.status }}</td>
-            <td>{{ resource.created_at }}</td>
+            <td>{{ resource.synced_at|default:"-" }}</td>
         </tr>
         {% empty %}
         <tr>
@@ -63,7 +63,7 @@
             <td>{{ resource.resource_type }}</td>
             <td>{{ resource.resource_id }}</td>
             <td>{{ resource.status }}</td>
-            <td>{{ resource.created_at }}</td>
+            <td>{{ resource.synced_at|default:"-" }}</td>
         </tr>
         {% empty %}
         <tr>

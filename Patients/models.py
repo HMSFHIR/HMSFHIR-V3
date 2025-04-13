@@ -1,6 +1,7 @@
 from django.db import models
 from Practitioner.models import Practitioner
 from datetime import date
+from django.utils import timezone
 
 #  Patient Model (FHIR-Compatible)
 class Patient(models.Model):
@@ -113,4 +114,20 @@ class Condition(models.Model):
 
     def __str__(self):
         return f"Condition {self.condition_id} - {self.patient.name}"
+
+
+
+class FHIRSyncTask(models.Model):
+    resource_type = models.CharField(max_length=100, default="Patient")
+    resource_id = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=[
+        ("pending", "Pending"),
+        ("synced", "Synced"),
+        ("failed", "Failed"),
+    ], default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    synced_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.resource_type} - {self.resource_id} ({self.status})"
 
