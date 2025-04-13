@@ -7,19 +7,20 @@ import requests
 from .models import PendingSyncQueue
 from django.views.decorators.csrf import csrf_exempt
 from Patients.sync_logic import run_sync
+from Patients.models import FHIRSyncTask
 
 
 def sync_status_view(request):
     try:
-        # 🔌 Simple check to test FHIR server connectivity (you can adjust this)
+        # 🔌 Check FHIR server connectivity
         response = requests.get("http://localhost:8080/fhir/metadata", timeout=3)
         server_connected = response.status_code == 200
     except requests.RequestException:
         server_connected = False
 
     # ⏳ Get pending + synced tasks
-    pending_tasks = PendingSyncQueue.objects.filter(status="pending").order_by("-created_at")
-    synced_tasks = PendingSyncQueue.objects.exclude(status="pending").order_by("-created_at")
+    pending_tasks = FHIRSyncTask.objects.filter(status="pending").order_by("-created_at")
+    synced_tasks = FHIRSyncTask.objects.exclude(status="pending").order_by("-created_at")
 
     context = {
         "server_connected": server_connected,
@@ -52,3 +53,18 @@ def manual_sync_view(request):
 
     # Optional GET handler if needed
     return redirect("sync-status")
+
+
+
+
+def fhir_sync_status(request):
+    server_connected = check_server_status()  # Your logic to test connection
+    pending_tasks = FHIRSyncTask.objects.filter(status="pending")
+    synced_tasks = FHIRSyncTask.objects.filter(status="synced")
+
+    return render(request, "Patients/fhir_sync_status.html", {
+        "server_connected": server_connected,
+        "pending_tasks": pending_tasks,
+        "synced_tasks": synced_tasks,
+    })
+
