@@ -1,0 +1,79 @@
+{% extends "Patients/main.html" %}
+{% load static %}
+
+{% block title %}
+    Medical Records
+{% endblock %}
+
+{% block PageName %}
+    Medical Records Status
+{% endblock %}
+
+{% block content %}
+<section class="operations">
+    <h2>🩺 Medical Records Status</h2>
+    {% if server_connected %}
+        <p style="color:green;">✅ Successfully connected to the medical records server.</p>
+
+        <!-- 🔘 Sync Now Button -->
+        <form method="post" action="{% url 'manual_sync' %}">
+            {% csrf_token %}
+            <button type="submit" class="sync-button">🔁 Sync Now</button>
+        </form>
+    {% else %}
+        <p style="color:red;">⚠️ Unable to connect to the medical records server. Please check the server status.</p>
+    {% endif %}
+</section>
+
+<h3>⏳ Pending Medical Records</h3>
+<table class="patients-table">
+    <thead>
+        <tr>
+            <th>Record Type</th>
+            <th>Record ID</th>
+            <th>Status</th>
+            <th>Queued At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in pending_tasks %}
+        <tr>
+            <td>{{ record.resource_type }}</td>
+            <td>{{ record.resource_id }}</td>
+            <td>{{ record.status }}</td>
+            <td>{{ record.synced_at|default:"-" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">✅ No pending medical records</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>✅ Synced Medical Records</h3>
+<table class="patients-table">
+    <thead>
+        <tr>
+            <th>Record Type</th>
+            <th>Record ID</th>
+            <th>Status</th>
+            <th>Synced At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in synced_tasks %}
+        <tr>
+            <td>{{ record.resource_type }}</td>
+            <td>{{ record.resource_id }}</td>
+            <td>{{ record.status }}</td>
+            <td>{{ record.synced_at|default:"-" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">⚠️ No synced medical records yet</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -75,27 +75,10 @@ class Encounter(models.Model):
         return f"Encounter {self.encounter_id} - {self.patient.name} ({self.encounter_type})"
 
 #  Observation Model
-class Observation(models.Model):
-    observation_id = models.CharField(max_length=100, unique=True)
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    encounter = models.ForeignKey(Encounter, on_delete=models.SET_NULL, null=True, blank=True)
-    category = models.CharField(max_length=50, choices=[
-        ("vital-signs", "Vital Signs"), ("laboratory", "Laboratory"),
-        ("imaging", "Imaging"), ("social-history", "Social History"),
-        ("diagnostic", "Diagnostic")
-    ])
-    observation_type = models.CharField(max_length=255)  # e.g., "Blood Pressure"
-    value = models.CharField(max_length=100)  # e.g., "120/80 mmHg"
-    unit = models.CharField(max_length=50, blank=True, null=True)
-    recorded_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.patient.name} - {self.observation_type}: {self.value} {self.unit}"
-
-#  Condition (FHIR-Compatible Medical Record)
+#  Condition Model
 class Condition(models.Model):
     condition_id = models.AutoField(primary_key=True)
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='conditions')  # specify related_name
     encounter = models.ForeignKey(Encounter, on_delete=models.SET_NULL, blank=True, null=True)
     recorded_date = models.DateTimeField(blank=True, null=True)
     recorder = models.ForeignKey(Practitioner, on_delete=models.SET_NULL, blank=True, null=True)
@@ -114,6 +97,26 @@ class Condition(models.Model):
 
     def __str__(self):
         return f"Condition {self.condition_id} - {self.patient.name}"
+
+
+#  Observation Model
+class Observation(models.Model):
+    observation_id = models.CharField(max_length=100, unique=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='observations')  # specify related_name
+    encounter = models.ForeignKey(Encounter, on_delete=models.SET_NULL, null=True, blank=True)
+    category = models.CharField(max_length=50, choices=[
+        ("vital-signs", "Vital Signs"), ("laboratory", "Laboratory"),
+        ("imaging", "Imaging"), ("social-history", "Social History"),
+        ("diagnostic", "Diagnostic")
+    ])
+    observation_type = models.CharField(max_length=255)  # e.g., "Blood Pressure"
+    value = models.CharField(max_length=100)  # e.g., "120/80 mmHg"
+    unit = models.CharField(max_length=50, blank=True, null=True)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.patient.name} - {self.observation_type}: {self.value} {self.unit}"
+
 
 
 
