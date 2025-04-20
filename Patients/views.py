@@ -1,11 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db import IntegrityError
-# from .fhir_service import get_patient, get_patient_condition, get_patient_with_condition
 from django.views.decorators.csrf import csrf_exempt
 from datetime import date
 from rest_framework import viewsets
-from .models import Patient, Practitioner, Encounter, Observation, Condition
-from .serializers import PatientSerializer, PractitionerSerializer, EncounterSerializer, ObservationSerializer
+from .models import Patient
+from .serializers import PatientSerializer
 from .forms import PatientForm
 from django.utils.crypto import get_random_string
 from django.db.models import Q
@@ -21,19 +20,6 @@ from django.http import JsonResponse
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
-
-class PractitionerViewSet(viewsets.ModelViewSet):
-    queryset = Practitioner.objects.all()
-    serializer_class = PractitionerSerializer
-
-class EncounterViewSet(viewsets.ModelViewSet):
-    queryset = Encounter.objects.all()
-    serializer_class = EncounterSerializer
-
-class ObservationViewSet(viewsets.ModelViewSet):
-    queryset = Observation.objects.all()
-    serializer_class = ObservationSerializer
-
 
 
 

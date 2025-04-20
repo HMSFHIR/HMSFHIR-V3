@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'Practitioner',
     'fhir_sync',
     'Patients.apps.PatientsConfig',
+    'MedicalRecords.apps.MedicalrecordsConfig',
 ]
 
 # FHIR SERVER BASE URL

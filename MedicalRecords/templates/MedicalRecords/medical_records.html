@@ -1,0 +1,56 @@
+{% extends "Patients/main.html" %}
+
+{% block PageName %}
+    Medical Records
+{% endblock %}
+
+{% block title %}
+    Medical Records
+{% endblock %}
+
+
+
+{% block content %}
+<nav class="navbar-top">
+    <section class="operations">
+        <a href="{% url 'add_medical_record' %}" class="newPatient">Add Records</a>
+    </section>
+</nav>
+
+<h3>📋 Medical Records</h3>
+<table class="patients-table">
+    <thead>
+        <tr>
+            <th>Record Type</th>
+            <th>FHIR ID</th>
+            <th>Patient ID</th>
+            <th>Gender</th>
+            <th>National ID</th>
+            <th>Doctor</th>
+            <th>Last Arrived</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in medical_records %}
+        <tr>
+            <td>{{ record.record_type }}</td>
+            <td>{{ record.fhir_id }}</td>
+            <td>{{ record.patient_id }}</td>
+            <td>{{ record.gender }}</td>
+            <td>{{ record.national_id }}</td>
+            <td>Dr. John Doe</td>
+            <td>{{ record.last_arrived|default:"-" }}</td>
+            <td>
+                <a class="btn btn-add" href="#">+</a>
+                <a class="btn btn-edit" href="#">E</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="8">⚠️ No medical records found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

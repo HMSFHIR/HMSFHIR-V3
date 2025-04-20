@@ -7,4 +7,5 @@ urlpatterns = [
     path('Appointments/', include('Appointments.urls')),
     path('Practitioners/', include('Practitioner.urls')),
     path('Sync/', include('fhir_sync.urls') ),
+    path('MedicalRecords/', include('MedicalRecords.urls')),
 ]
