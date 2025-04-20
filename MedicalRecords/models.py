@@ -2,24 +2,28 @@ from django.db import models
 from django.utils import timezone
 from Patients.models import Patient
 
-
 class Encounter(models.Model):
-    patient = models.ForeignKey("Patients.Patient", on_delete=models.CASCADE, related_name="medical_encounters")
-    encounter_type = models.CharField(max_length=100, default="outpatient")  # outpatient, inpatient, etc.
-    reason = models.TextField()
-    location = models.CharField(max_length=255, blank=True)
+    # Your existing Encounter fields here
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    encounter_type = models.CharField(max_length=100)
+    reason = models.CharField(max_length=200)
+    location = models.CharField(max_length=100)
     start_time = models.DateTimeField()
-    end_time = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=50, default="finished")  # planned, in-progress, finished
-
+    end_time = models.DateTimeField()
+    status = models.CharField(max_length=50)
 
 class Observation(models.Model):
-    encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="medical_observations")
-    patient = models.ForeignKey("Patients.Patient", on_delete=models.CASCADE)
-    code = models.CharField(max_length=100)  # e.g. blood-pressure
-    value = models.CharField(max_length=100)
-    unit = models.CharField(max_length=50)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE)  # ForeignKey to Encounter
+    code = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
+    unit = models.CharField(max_length=100)
     observation_time = models.DateTimeField()
+
+    def __str__(self):
+        return f"Observation for {self.patient} during {self.encounter}"
+
+
 
 class Condition(models.Model):
     encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="medical_conditions")

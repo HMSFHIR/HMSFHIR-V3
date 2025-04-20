@@ -1,0 +1,100 @@
+{% extends "Patients/main.html" %}
+{% load static %}
+
+{% block title %}Add Medical Record{% endblock %}
+{% block PageName %}New Medical Record{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>🩺 Encounter Details</h2>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-section">
+            {{ encounter_form.as_p }}
+        </div>
+
+        <hr>
+        <h3>🧪 Observations</h3>
+        <div class="form-section">
+            {{ obs_formset.management_form }}
+            {% for form in obs_formset %}
+                <div class="form-inline">
+                    {{ form.as_p }}
+                </div>
+                <hr>
+            {% endfor %}
+        </div>
+
+        <h3>📋 Conditions</h3>
+        <div class="form-section">
+            {{ cond_formset.management_form }}
+            {% for form in cond_formset %}
+                <div class="form-inline">
+                    {{ form.as_p }}
+                </div>
+                <hr>
+            {% endfor %}
+        </div>
+
+        <h3>💊 Medications</h3>
+        <div class="form-section">
+            {{ med_formset.management_form }}
+            {% for form in med_formset %}
+                <div class="form-inline">
+                    {{ form.as_p }}
+                </div>
+                <hr>
+            {% endfor %}
+        </div>
+
+        <h3>🏥 Procedures</h3>
+        <div class="form-section">
+            {{ proc_formset.management_form }}
+            {% for form in proc_formset %}
+                <div class="form-inline">
+                    {{ form.as_p }}
+                </div>
+                <hr>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">💾 Save Medical Record</button>
+    </form>
+</div>
+
+<style>
+    .form-container {
+        max-width: 1000px;
+        margin: auto;
+        padding: 2rem;
+        background-color: #f9f9f9;
+        border-radius: 1rem;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .form-section {
+        margin-bottom: 2rem;
+    }
+    .form-inline {
+        border-left: 4px solid #0077cc;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+    }
+    h2, h3 {
+        color: #333;
+        border-bottom: 2px solid #0077cc;
+        padding-bottom: 0.3rem;
+    }
+    .btn-primary {
+        background-color: #0077cc;
+        color: white;
+        padding: 0.7rem 1.5rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+    .btn-primary:hover {
+        background-color: #005fa3;
+    }
+</style>
+{% endblock %}
