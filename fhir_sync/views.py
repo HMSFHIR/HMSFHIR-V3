@@ -67,4 +67,3 @@ def fhir_sync_status(request):
         "pending_tasks": pending_tasks,
         "synced_tasks": synced_tasks,
     })
-

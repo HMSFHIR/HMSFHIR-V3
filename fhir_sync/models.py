@@ -1,10 +1,17 @@
 from django.db import models
 
-# Create your models here.
 class PendingSyncQueue(models.Model):
     resource_type = models.CharField(max_length=50, choices=[
-        ("Patient", "Patient"), ("Practitioner", "Practitioner"),
-        ("Encounter", "Encounter"), ("Observation", "Observation")
+        ("Patient", "Patient"),
+        ("Practitioner", "Practitioner"),
+        ("Encounter", "Encounter"),
+        ("Observation", "Observation"),
+        ("Condition", "Condition"),
+        ("MedicationStatement", "MedicationStatement"),
+        ("AllergyIntolerance", "AllergyIntolerance"),
+        ("Procedure", "Procedure"),
+        ("Immunization", "Immunization"),
+        ("DocumentReference", "DocumentReference"),
     ])
     resource_id = models.CharField(max_length=100)
     json_data = models.JSONField()
