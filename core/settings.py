@@ -43,7 +43,22 @@ INSTALLED_APPS = [
     'fhir_sync',
     'Patients.apps.PatientsConfig',
     'MedicalRecords.apps.MedicalrecordsConfig',
+    #'ckeditor5',
+
 ]
+
+"""
+CKEDITOR_5_CONFIGS = {
+    'default': {
+        'toolbar': [
+            'heading', '|', 'bold', 'italic', 'link', 'bulletedList',
+            'numberedList', 'blockQuote', 'undo', 'redo'
+        ],
+        'height': 300,
+        'width': '100%',
+    }
+}
+"""
 
 # FHIR SERVER BASE URL
 FHIR_SERVER_BASE_URL = "http://localhost:8080/fhir"

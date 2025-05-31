@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
 from django.forms import inlineformset_factory
+from django.utils.timezone import make_aware, is_naive
+from datetime import datetime
 
 from .models import (
     Encounter, Observation, Condition, MedicationStatement,
@@ -11,7 +13,7 @@ from .forms import (
     ProcedureForm, ImmunizationForm, DocumentReferenceForm
 )
 
-# Create your views here.
+
 def MedicalRecordsView(request):
     return render(request, 'MedicalRecords/medical_records.html')
 
@@ -65,69 +67,32 @@ def add_medical_record(request):
     })
 
 
-def medical_records_view(request):
-    records = []
-
-    for encounter in Encounter.objects.select_related('patient').all():
-        records.append({
-            'record_type': 'Encounter',
-            'fhir_id': f"enc-{encounter.id}",
-            'patient_id': encounter.patient.id,
-            'gender': encounter.patient.gender,
-            'national_id': encounter.patient.national_id,
-            'last_arrived': encounter.start_time,
-            'record_id': encounter.id
-        })
-
-    for observation in Observation.objects.select_related('patient', 'encounter').all():
-        records.append({
-            'record_type': 'Observation',
-            'fhir_id': f"obs-{observation.id}",
-            'patient_id': observation.patient.id,
-            'gender': observation.patient.gender,
-            'national_id': observation.patient.national_id,
-            'last_arrived': observation.observation_time,
-            'record_id': observation.id
-        })
-
-    for condition in Condition.objects.select_related('patient', 'encounter').all():
-        records.append({
-            'record_type': 'Condition',
-            'fhir_id': f"con-{condition.id}",
-            'patient_id': condition.patient.id,
-            'gender': condition.patient.gender,
-            'national_id': condition.patient.national_id,
-            'last_arrived': condition.onset_date,
-            'record_id': condition.id
-        })
-
-    # Repeat this pattern for other models...
-
-    context = {
-        'medical_records': records
-    }
-    return render(request, 'MedicalRecords/medical_records.html', context)
-
+def normalize_datetime(dt):
+    if dt is None:
+        return make_aware(datetime.min)
+    if isinstance(dt, datetime):
+        return make_aware(dt) if is_naive(dt) else dt
+    # It's a date object, convert to datetime
+    return make_aware(datetime.combine(dt, datetime.min.time()))
 
 
 def medical_records_view(request):
     records = []
 
-    # Reusable function to extract common patient info
     def patient_info(patient):
         return {
-            'patient_id': patient.id,
+            'patient_id': patient.patient_id,
             'gender': patient.gender,
             'national_id': patient.national_id,
         }
 
-    # Add Encounter records
+    # Encounter
     for encounter in Encounter.objects.select_related('patient').all():
         info = patient_info(encounter.patient)
         records.append({
             'record_type': 'Encounter',
             'fhir_id': f'enc-{encounter.id}',
-            'last_arrived': encounter.start_time,
+            'last_arrived': normalize_datetime(encounter.start_time),
             'record_id': encounter.id,
             **info
         })
@@ -138,7 +103,7 @@ def medical_records_view(request):
         records.append({
             'record_type': 'Observation',
             'fhir_id': f'obs-{obs.id}',
-            'last_arrived': obs.observation_time,
+            'last_arrived': normalize_datetime(obs.observation_time),
             'record_id': obs.id,
             **info
         })
@@ -149,7 +114,7 @@ def medical_records_view(request):
         records.append({
             'record_type': 'Condition',
             'fhir_id': f'con-{con.id}',
-            'last_arrived': con.onset_date,
+            'last_arrived': normalize_datetime(con.onset_date),
             'record_id': con.id,
             **info
         })
@@ -160,7 +125,7 @@ def medical_records_view(request):
         records.append({
             'record_type': 'Medication',
             'fhir_id': f'med-{med.id}',
-            'last_arrived': med.start_date,
+            'last_arrived': normalize_datetime(med.start_date),
             'record_id': med.id,
             **info
         })
@@ -171,7 +136,7 @@ def medical_records_view(request):
         records.append({
             'record_type': 'Allergy',
             'fhir_id': f'allergy-{allergy.id}',
-            'last_arrived': allergy.recorded_date,
+            'last_arrived': normalize_datetime(allergy.recorded_date),
             'record_id': allergy.id,
             **info
         })
@@ -182,7 +147,7 @@ def medical_records_view(request):
         records.append({
             'record_type': 'Procedure',
             'fhir_id': f'proc-{proc.id}',
-            'last_arrived': proc.performed_date,
+            'last_arrived': normalize_datetime(proc.performed_date),
             'record_id': proc.id,
             **info
         })
@@ -193,7 +158,7 @@ def medical_records_view(request):
         records.append({
             'record_type': 'Immunization',
             'fhir_id': f'imm-{imm.id}',
-            'last_arrived': imm.date_administered,
+            'last_arrived': normalize_datetime(imm.date_administered),
             'record_id': imm.id,
             **info
         })
@@ -204,13 +169,13 @@ def medical_records_view(request):
         records.append({
             'record_type': f'Document: {doc.type}',
             'fhir_id': f'doc-{doc.id}',
-            'last_arrived': doc.date_uploaded,
+            'last_arrived': normalize_datetime(doc.date_uploaded),
             'record_id': doc.id,
             **info
         })
 
     # Sort all records by most recent first
-    records = sorted(records, key=lambda r: r['last_arrived'] or '', reverse=True)
+    records = sorted(records, key=lambda r: r['last_arrived'], reverse=True)
 
     context = {'medical_records': records}
     return render(request, 'MedicalRecords/medical_records.html', context)

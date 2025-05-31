@@ -2,11 +2,12 @@ from django.db import models
 from django.utils import timezone
 from Patients.models import Patient
 
+
 class Encounter(models.Model):
     # Your existing Encounter fields here
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     encounter_type = models.CharField(max_length=100)
-    reason = models.CharField(max_length=200)
+    reason = models.TextField()
     location = models.CharField(max_length=100)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()

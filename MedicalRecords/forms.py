@@ -8,13 +8,15 @@ from .models import (
 
 # 🌟 Main Encounter Form
 class EncounterForm(forms.ModelForm):
+
+
     class Meta:
         model = Encounter
         fields = ['patient', 'encounter_type', 'reason', 'location', 'start_time', 'end_time', 'status']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         self.fields['patient'].label = "Patient"
         self.fields['encounter_type'].label = "Encounter Type"
         self.fields['reason'].label = "Reason for Encounter"
@@ -22,7 +24,7 @@ class EncounterForm(forms.ModelForm):
         self.fields['start_time'].label = "Start Time"
         self.fields['end_time'].label = "End Time"
         self.fields['status'].label = "Encounter Status"
-        
+
         self.fields['patient'].help_text = "Select the patient for the encounter"
         self.fields['encounter_type'].help_text = "Specify the type of encounter (e.g., Emergency, Routine)"
         self.fields['reason'].help_text = "Enter the reason for the encounter"
