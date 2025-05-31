@@ -1,3 +1,4 @@
+from datetime import timezone
 import requests
 from .models import PendingSyncQueue
 from django.conf import settings

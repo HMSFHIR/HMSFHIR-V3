@@ -58,7 +58,12 @@ def manual_sync_view(request):
 
 
 def fhir_sync_status(request):
-    server_connected = check_server_status()  # Your logic to test connection
+    try:
+        response = requests.get(f"{settings.FHIR_SERVER_BASE_URL}/metadata", timeout=2)
+        server_connected = response.status_code == 200
+    except Exception:
+        server_connected = False
+
     pending_tasks = FHIRSyncTask.objects.filter(status="pending")
     synced_tasks = FHIRSyncTask.objects.filter(status="synced")
 

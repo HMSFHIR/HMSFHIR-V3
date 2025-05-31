@@ -10,4 +10,4 @@ class PatientsConfig(AppConfig):
     name = 'patients'
 
     def ready(self):
-        import patients.signals
+        from . import signals
