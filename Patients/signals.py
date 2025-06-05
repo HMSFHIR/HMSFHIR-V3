@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from Patients.models import Patient
-from fhir_sync.models import PendingSyncQueue
+
 
 @receiver(post_save, sender=Patient)
 def queue_patient_for_sync(sender, instance, **kwargs):
