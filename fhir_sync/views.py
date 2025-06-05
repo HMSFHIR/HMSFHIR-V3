@@ -1,3 +1,4 @@
+#views.py
 from django.shortcuts import render,redirect
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,6 +9,9 @@ from .models import PendingSyncQueue
 from django.views.decorators.csrf import csrf_exempt
 from Patients.sync_logic import run_sync
 from Patients.models import FHIRSyncTask
+from .enhanced_tasks import full_sync_task
+from .enhanced_tasks import periodic_fhir_pull
+
 
 
 def sync_status_view(request):
@@ -48,13 +52,9 @@ def sync_queue_view(request):
 @csrf_exempt
 def manual_sync_view(request):
     if request.method == "POST":
-        run_sync()
-        return redirect("sync-status")  # Name of your sync status URL
-
-    # Optional GET handler if needed
-    return redirect("sync-status")
-
-
+        # Use the comprehensive sync instead
+        full_sync_task.delay()  # This syncs ALL resource types
+        return redirect("sync-status")
 
 
 def fhir_sync_status(request):

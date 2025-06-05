@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'Appointments',
     'Practitioner',
-    'fhir_sync',
+    'Fsync',
     'Patients.apps.PatientsConfig',
     'MedicalRecords.apps.MedicalrecordsConfig',
     #'ckeditor5',
