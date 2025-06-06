@@ -269,21 +269,24 @@ nav p {
 /* Table styling */
 .table {
     width: 100%;
+    border-collapse: collapse;
     margin-bottom: 0;
+    table-layout: fixed; /* Ensures columns are evenly distributed */
+}
+
+.table th,
+.table td {
+    padding: 12px;
+    text-align: left;
+    vertical-align: middle;
+    border: 1px solid #dee2e6;
+    word-wrap: break-word;
 }
 
 .table th {
-    background-color: #f8f9fa;
-    border-top: none;
+    background-color: #3087df;
+    color: #fff;
     font-weight: 600;
-    color: #495057;
-    padding: 15px 12px;
-    display: flex;
-}
-
-.table td {
-    padding: 12px;
-    vertical-align: middle;
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
