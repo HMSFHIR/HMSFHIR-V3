@@ -1,125 +1,161 @@
-
-    /* Reset default margin and padding */
+/* Reset default margin and padding */
 * {
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-font-family: 'Poppins', sans-serif;
-font-size: 13px;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
 }
 
-    /* Layout */
+/* Layout */
 main {
-display: flex;
-height: 100vh;
-background-color: #f5f7fa;
+    display: flex;
+    height: 100vh;
+    background-color: #f5f7fa;
 }
 
 /* Sidebar */
 .Info-panel {
-width: 20vw;
-background-color: aliceblue; /* Reference color from the design */
-color: black;
-display: flex;
-flex-direction: column;
-padding: 15px 15px 0 15px;
-min-height: 100vh;
+    width: 20vw;
+    min-width: 250px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 15px 0 15px;
+    min-height: 100vh;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .Info-panel img {
     width: 45px;
     height: 45px;
-    border-radius: 5px;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .Info-panel b {
     font-size: 20px;
     margin-left: 12px;
+    font-weight: 600;
 }
 
 .Info-panel p {
     margin-top: 12px;
-    font-size: 15px;
-    opacity: 0.9;
+    font-size: 14px;
+    opacity: 0.8;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 nav p {
-    margin-top: 20px;
+    margin-top: 30px;
     font-weight: bold;
-    font-size: 12px;
-    color: #d6e6f2;
-    letter-spacing: 1px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
 }
 
 .Info-panel ul {
-list-style: none;
-margin-top: 15px;
+    list-style: none;
+    margin-top: 15px;
 }
 
 .Info-panel ul li {
-    margin: 12px 0;
+    margin: 8px 0;
 }
 
 .Info-panel ul li a {
     display: flex;
     align-items: center;
-    padding: 12px;
+    padding: 12px 15px;
     text-decoration: none;
-    color: black;
-    border-radius: 8px;
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    font-size: 13px;
     font-weight: 500;
-    transition: background 0.3s ease;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.Info-panel ul li a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.Info-panel ul li a:hover::before {
+    left: 100%;
 }
 
 .Info-panel ul li a:hover {
-    background-color: #003366;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.Info-panel ul li a.active {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-weight: 600;
 }
 
 .Info-panel ul li img {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     margin-right: 12px;
+    opacity: 0.8;
 }
 
- /* Main Content Panel */
+/* Main Content Panel */
 .CRUD-panel {
     display: flex;
     width: 80vw;
     flex-direction: column;
-    padding: 10px;
-    background-color: white;
-    /*border-radius: 12px;*/
-    /*box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);*/
+    background-color: #f8f9fa;
     overflow-y: auto;
+    position: relative;
 }
 
-.title{
+.title {
     width: 100%;
     text-align: center;
+    padding: 20px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #2c3e50;
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 0;
 }
 
-/* Footer */
-footer {
-    text-align: center;
-    padding: 12px;
-    font-size: 15px;
-    background-color: #004b8d;
-    color: white;
-    position: absolute;
-    width: 100%;
-    bottom: 0;
+/* Content area styling */
+.content-area {
+    padding: 20px;
+    flex: 1;
+    background: white;
+    margin: 0;
 }
 
-/* ========== DOCTOR'S NAVBAR ========== */
+/* Doctor's Navbar */
 .doctor-navbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #004b8d; /* Dark blue theme */
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
     color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 15px 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 /* Navbar styling */
@@ -135,14 +171,15 @@ footer {
 .doctor-info {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .doctor-img {
-    width: 30px;
-    height: 30px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
     object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 /* Dropdown Container */
@@ -152,24 +189,34 @@ footer {
 
 /* Dropdown Toggle Button */
 .dropdown-toggle {
-    background: none;
-    border: none;
-    font-size: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
     cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dropdown-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 /* Dropdown Menu */
 .dropdown-menu {
     position: absolute;
     right: 0;
-    top: 100%;
+    top: calc(100% + 5px);
     background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    border: none;
+    border-radius: 8px;
     display: none;
     flex-direction: column;
-    width: 150px;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    width: 180px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    z-index: 1000;
 }
 
 /* Show dropdown on hover */
@@ -179,12 +226,239 @@ footer {
 
 /* Dropdown Item Styling */
 .dropdown-item {
-    padding: 10px;
+    padding: 12px 16px;
     text-decoration: none;
-    color: #333;
+    color: #495057;
     display: block;
+    font-size: 13px;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
 }
 
 .dropdown-item:hover {
-    background-color: #f1f1f1;
+    background-color: #f8f9fa;
+    color: #4a90e2;
+}
+
+/* Card styling for content */
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+    border: none;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-bottom: none;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Table styling */
+.table {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    padding: 15px 12px;
+    display: flex;
+}
+
+.table td {
+    padding: 12px;
+    vertical-align: middle;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Button styling */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 10px 20px;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(74, 144, 226, 0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Form styling */
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    padding: 12px 15px;
+    font-size: 13px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+}
+
+/* Search input styling */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group .form-control {
+    border-right: none;
+}
+
+.input-group .btn {
+    border-left: none;
+    background: white;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .Info-panel {
+        width: 100%;
+        min-width: unset;
+        position: fixed;
+        top: 0;
+        left: -100%;
+        z-index: 1000;
+        transition: left 0.3s ease;
+    }
+    
+    .Info-panel.active {
+        left: 0;
+    }
+    
+    .CRUD-panel {
+        width: 100%;
+        padding: 10px;
+    }
+    
+    .doctor-navbar {
+        padding: 10px 15px;
+    }
+    
+    .info-container {
+        width: auto;
+    }
+}
+
+/* Loading animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.content-area {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 15px;
+    font-size: 13px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-top: auto;
+}
+
+/* Utility classes */
+.text-muted {
+    color: #6c757d !important;
+}
+
+.mt-3 {
+    margin-top: 1rem !important;
+}
+
+.mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+.mb-4 {
+    margin-bottom: 1.5rem !important;
+}
+
+.d-flex {
+    display: flex !important;
+}
+
+.justify-content-between {
+    justify-content: space-between !important;
+}
+
+.align-items-center {
+    align-items: center !important;
+}
+
+/* Status badges */
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
 }

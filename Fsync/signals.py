@@ -6,6 +6,7 @@ from .services import SyncQueueManager
 from .mappers import FHIR_MAPPERS
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 def setup_sync_signals():

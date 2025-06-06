@@ -105,16 +105,18 @@ from Fsync.tasks import (
     sync_single_resource_task
 )
 
-@login_required
+#@login_required
 def admin_dashboard(request):
     """Main admin dashboard view"""
+
     context = {
-        'active_tasks': get_active_tasks(),
-        'recent_tasks': get_recent_task_history(),
-        'system_stats': get_system_statistics(),
-        'sync_metrics': get_sync_metrics(),
+        'page_title': 'FHIR Sync Dashboard',
+        'active_tasks': [],  # Empty for now
+        'recent_operations': [],  # Empty for now
+        'system_stats': {},  # Empty for now
     }
-    return render(request, 'admin/dashboard.html', context)
+
+    return render(request, 'Fsync/dashboard.html', context)
 
 @login_required
 def analytics_dashboard(request):
@@ -125,7 +127,7 @@ def analytics_dashboard(request):
         'error_analysis': get_error_analysis(),
         'resource_breakdown': get_resource_breakdown(),
     }
-    return render(request, 'admin/analytics.html', context)
+    return render(request, 'Fsync/analytics.html', context)
 
 @csrf_exempt
 @login_required
