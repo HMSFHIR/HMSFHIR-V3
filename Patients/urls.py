@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views 
+from MedicalRecords import urls
 
 urlpatterns = [
     path("", views.Dashboard, name="Dashboard"),

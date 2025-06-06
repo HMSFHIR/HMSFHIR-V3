@@ -10,6 +10,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import SyncQueue, SyncRule, FHIRSyncConfig, SyncLog
+from django.contrib.contenttypes.models import ContentType
+
 
 logger = logging.getLogger(__name__)
 
