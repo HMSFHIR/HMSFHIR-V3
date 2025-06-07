@@ -57,15 +57,16 @@ This project is the core backend for a Healthcare Management System (HMS) built 
   ```bash
   docker-compose exec web python manage.py shell
   ```
-
-## License
-
-See [LICENSE](../LICENSE) for details.
-
-## Creating a Superuser
+  ## Creating a Superuser
 
 To create a Django superuser for admin access, run:
 
 ```bash
 docker-compose exec web python manage.py createsuperuser
 ```
+
+## License
+
+See [LICENSE](../LICENSE) for details.
+
+
