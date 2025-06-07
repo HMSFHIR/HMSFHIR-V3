@@ -86,7 +86,7 @@ def doctor_dashboard(request):
         messages.error(request, 'Access denied. Doctor privileges required.')
         return redirect('dashboard')
     
-    return render(request, 'dashboard/doctor.html', {'user': request.user})
+    return render(request, 'autht/doctor.html', {'user': request.user})
 
 @login_required
 def nurse_dashboard(request):
@@ -95,4 +95,4 @@ def nurse_dashboard(request):
         messages.error(request, 'Access denied. Nurse privileges required.')
         return redirect('dashboard')
     
-    return render(request, 'dashboard/nurse.html', {'user': request.user})
+    return render(request, 'autht/nurse.html', {'user': request.user})

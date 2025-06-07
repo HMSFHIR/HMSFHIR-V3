@@ -1,348 +1,125 @@
-<!-- templates/admin/dashboard.html -->
+<!-- templates/dashboard/admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FHIR HMS Admin Dashboard</title>
-    <link rel="stylesheet" href="{% load static %}{% static 'Fsync/dashboard.css' %}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>Admin Dashboard - HMS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .logout-btn {
+            transition: all 0.3s ease;
+        }
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+    </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- Sidebar -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <h2><i class="fas fa-hospital"></i> FHIR HMS</h2>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-hospital me-2"></i>HMS Admin
+            </a>
+            <div class="navbar-nav ms-auto d-flex align-items-center">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-user-shield me-1"></i>
+                    Welcome, {{ user.get_full_name }}
+                </span>
+                <a class="btn btn-outline-light logout-btn" href="{% url 'logout' %}" 
+                   onclick="return confirm('Are you sure you want to logout?')">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
             </div>
-            <ul class="sidebar-menu">
-                <li class="active">
-                    <a href="{% url 'admin_dashboard' %}">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                </li>
-                <li>
-                    <a href="{% url 'analytics_dashboard' %}">
-                        <i class="fas fa-chart-bar"></i> Analytics
-                    </a>
-                </li>
-                <li>
-                    <a href="#" onclick="toggleLogs()">
-                        <i class="fas fa-list"></i> Logs
-                    </a>
-                </li>
-                <li>
-                    <a href="#" onclick="refreshDashboard()">
-                        <i class="fas fa-sync"></i> Refresh
-                    </a>
-                </li>
-            </ul>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="dashboard-header">
-                <h1>FHIR Sync Dashboard</h1>
-                <div class="system-status">
-                    <span class="status-indicator" id="celery-status">
-                        <i class="fas fa-circle"></i> Celery: Active
-                    </span>
-                    <span class="status-indicator" id="redis-status">
-                        <i class="fas fa-circle"></i> Redis: Connected
-                    </span>
-                </div>
-            </header>
-
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-sync"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>{{ system_stats.total_syncs_today }}</h3>
-                        <p>Total Syncs Today</p>
+        </div>
+    </nav>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard</h2>
+                    <!-- Additional logout button in main content area -->
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="adminMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-cog me-1"></i>Admin Menu
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="adminMenu">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile Settings</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-bell me-2"></i>Notifications</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{% url 'logout' %}" 
+                                   onclick="return confirm('Are you sure you want to logout?')">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
-                <div class="stat-card success">
-                    <div class="stat-icon">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>{{ system_stats.successful_syncs }}</h3>
-                        <p>Successful Syncs</p>
-                    </div>
-                </div>
-                <div class="stat-card error">
-                    <div class="stat-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>{{ system_stats.failed_syncs }}</h3>
-                        <p>Failed Syncs</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>{{ system_stats.avg_sync_time }}</h3>
-                        <p>Avg Sync Time</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Task Management -->
-            <div class="dashboard-section">
-                <h2>Sync Task Management</h2>
-                <div class="task-controls">
-                    <div class="task-grid">
-                        <div class="task-card">
-                            <div class="task-header">
-                                <h3>Full Sync Task</h3>
-                                <span class="task-status idle">Idle</span>
-                            </div>
-                            <p>Synchronizes all FHIR resources</p>
-                            <div class="task-actions">
-                                <button class="btn btn-primary" onclick="startTask('full_sync')">
-                                    <i class="fas fa-play"></i> Start
-                                </button>
-                                <button class="btn btn-secondary" onclick="stopTask('full_sync')">
-                                    <i class="fas fa-stop"></i> Stop
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="task-card">
-                            <div class="task-header">
-                                <h3>Process Queue</h3>
-                                <span class="task-status running">Running</span>
-                            </div>
-                            <p>Processes items in sync queue</p>
-                            <div class="task-actions">
-                                <button class="btn btn-primary" onclick="startTask('process_queue')">
-                                    <i class="fas fa-play"></i> Start
-                                </button>
-                                <button class="btn btn-secondary" onclick="stopTask('process_queue')">
-                                    <i class="fas fa-stop"></i> Stop
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="task-card">
-                            <div class="task-header">
-                                <h3>Cleanup Tasks</h3>
-                                <span class="task-status idle">Idle</span>
-                            </div>
-                            <p>Cleans up old sync records</p>
-                            <div class="task-actions">
-                                <button class="btn btn-primary" onclick="startTask('cleanup')">
-                                    <i class="fas fa-play"></i> Start
-                                </button>
-                                <button class="btn btn-secondary" onclick="stopTask('cleanup')">
-                                    <i class="fas fa-stop"></i> Stop
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="task-card">
-                            <div class="task-header">
-                                <h3>Retry Failed</h3>
-                                <span class="task-status idle">Idle</span>
-                            </div>
-                            <p>Retries failed sync operations</p>
-                            <div class="task-actions">
-                                <button class="btn btn-primary" onclick="startTask('retry_failed')">
-                                    <i class="fas fa-play"></i> Start
-                                </button>
-                                <button class="btn btn-secondary" onclick="stopTask('retry_failed')">
-                                    <i class="fas fa-stop"></i> Stop
-                                </button>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-primary text-white h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5><i class="fas fa-cogs me-2"></i>System Management</h5>
+                                        <p>Manage hospital systems and configurations</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-cogs fa-2x opacity-75"></i>
+                                    </div>
+                                </div>
+                                <a href="#" class="btn btn-light btn-sm mt-2">
+                                    <i class="fas fa-arrow-right me-1"></i>Access
+                                </a>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Recent Tasks -->
-            <div class="dashboard-section">
-                <h2>Recent Task History</h2>
-                <div class="task-history">
-                    <table class="task-table">
-                        <thead>
-                            <tr>
-                                <th>Task Name</th>
-                                <th>Status</th>
-                                <th>Timestamp</th>
-                                <th>Duration</th>
-                                <th>Result</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for task in recent_tasks %}
-                            <tr>
-                                <td>{{ task.name }}</td>
-                                <td>
-                                    <span class="status-badge {{ task.status|lower }}">
-                                        {{ task.status }}
-                                    </span>
-                                </td>
-                                <td>{{ task.timestamp|date:"Y-m-d H:i:s" }}</td>
-                                <td>{{ task.duration }}</td>
-                                <td>{{ task.result }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- System Metrics -->
-            <div class="dashboard-section">
-                <h2>System Metrics</h2>
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <h4>Sync Rate</h4>
-                        <div class="metric-value">{{ sync_metrics.sync_rate_per_hour }}/hr</div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-success text-white h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5><i class="fas fa-users me-2"></i>User Management</h5>
+                                        <p>Manage doctors, nurses, and staff accounts</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-users fa-2x opacity-75"></i>
+                                    </div>
+                                </div>
+                                <a href="#" class="btn btn-light btn-sm mt-2">
+                                    <i class="fas fa-arrow-right me-1"></i>Access
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                    <div class="metric-card">
-                        <h4>Error Rate</h4>
-                        <div class="metric-value">{{ sync_metrics.error_rate }}%</div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-warning text-white h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5><i class="fas fa-chart-bar me-2"></i>Reports</h5>
+                                        <p>Generate and view system reports</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-chart-bar fa-2x opacity-75"></i>
+                                    </div>
+                                </div>
+                                <a href="#" class="btn btn-light btn-sm mt-2">
+                                    <i class="fas fa-arrow-right me-1"></i>Access
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                    <div class="metric-card">
-                        <h4>Queue Time</h4>
-                        <div class="metric-value">{{ sync_metrics.avg_queue_time }}</div>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Worker Utilization</h4>
-                        <div class="metric-value">{{ sync_metrics.worker_utilization }}%</div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Logs Modal -->
-    <div id="logs-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>System Logs</h3>
-                <span class="close" onclick="toggleLogs()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="logs-container">
-                    <!-- Logs will be loaded here -->
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript -->
-    <script>
-        // Task management functions
-        function startTask(taskName) {
-            fetch('{% url "start_task" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({task_name: taskName})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('Task started successfully', 'success');
-                    setTimeout(refreshDashboard, 1000);
-                } else {
-                    showNotification('Failed to start task', 'error');
-                }
-            });
-        }
-
-        function stopTask(taskName) {
-            // Implementation for stopping tasks
-            showNotification('Stop task functionality', 'info');
-        }
-
-        function refreshDashboard() {
-            location.reload();
-        }
-
-        function toggleLogs() {
-            const modal = document.getElementById('logs-modal');
-            if (modal.style.display === 'block') {
-                modal.style.display = 'none';
-            } else {
-                modal.style.display = 'block';
-                loadLogs();
-            }
-        }
-
-        function loadLogs() {
-            fetch('{% url "task_logs" %}')
-            .then(response => response.json())
-            .then(data => {
-                const container = document.getElementById('logs-container');
-                container.innerHTML = '';
-                data.logs.forEach(log => {
-                    const logEntry = document.createElement('div');
-                    logEntry.className = `log-entry ${log.level.toLowerCase()}`;
-                    logEntry.innerHTML = `
-                        <span class="log-timestamp">${log.timestamp}</span>
-                        <span class="log-level">${log.level}</span>
-                        <span class="log-message">${log.message}</span>
-                    `;
-                    container.appendChild(logEntry);
-                });
-            });
-        }
-
-        function showNotification(message, type) {
-            // Simple notification system
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-
-        // Auto-refresh system status every 30 seconds
-        setInterval(() => {
-            fetch('{% url "system_status" %}')
-            .then(response => response.json())
-            .then(data => {
-                updateSystemStatus(data);
-            });
-        }, 30000);
-
-        function updateSystemStatus(status) {
-            const celeryStatus = document.getElementById('celery-status');
-            const redisStatus = document.getElementById('redis-status');
-            
-            celeryStatus.className = status.celery_active ? 'status-indicator active' : 'status-indicator inactive';
-            redisStatus.className = status.redis_connected ? 'status-indicator active' : 'status-indicator inactive';
-        }
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
