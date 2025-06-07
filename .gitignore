@@ -1,5 +1,10 @@
+# Python cache files
 __pycache__/
+
+# SQLite database (development only)
 db.sqlite3
-celerybeat-schedule
-celerybeat-schedule-shm
-celerybeat-schedule-wal 
+
+# Celery beat schedule files
+celerybeat-schedule*
+
+/venv/
