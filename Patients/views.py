@@ -9,27 +9,21 @@ from .forms import PatientForm
 from django.utils.crypto import get_random_string
 from django.db.models import Q
 from Appointments.models import Appointment
-
+from MedicalRecords.models import Condition, Encounter, Observation, MedicationStatement, AllergyIntolerance, Procedure, Immunization
 from django.http import JsonResponse
 
-
 #These ViewSets are for handling API endpoints 
-   # using Django REST Framework. Each ViewSet corresponds to a model 
-    #and provides built-in CRUD (Create, Read, Update, Delete) functionality.
-
+# using Django REST Framework. Each ViewSet corresponds to a model 
+#and provides built-in CRUD (Create, Read, Update, Delete) functionality.
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
 
-
-
 # Views for rendering HTML templates
-
 def Dashboard(request):
     appointments = Appointment.objects.all()  # Fetch all appointments
     context = {'Appointments': appointments}
     return render(request, "Patients/dashboard.html", context)
-
 
 def PatientList(request):
     query = request.GET.get('q')
@@ -42,11 +36,9 @@ def PatientList(request):
         )
     else:
         Patients = Patient.objects.all()
-
     context = {'Patients': Patients}
     return render(request, 'Patients/patientList.html', context)
     
-
 def AppointmentView(request):
     Appointments = Appointment.objects.all()
     context = {'Appointments' : Appointments }
@@ -55,16 +47,13 @@ def AppointmentView(request):
 def MedicalRecordView(request):
     context = {}
     return render(request, "Patients/medicalrecord.html", context)
-#
+
 def FHIRSync(request):
     context = {}
     return render(request, "Patients/fhirsync.html", context)
 
-
-
 ###Views for handling form submissions and data processing
 # views for CRUD operations
-
 #view for adding patients
 def add_patient(request):
     if request.method == "POST":
@@ -75,28 +64,23 @@ def add_patient(request):
             patient.last_arrived = date.today()
             patient.save()
             return redirect("PatientList")  # Redirect to patient list
-
     else:
         form = PatientForm()
-
     return render(request, "Patients/addpatient.html", {"form": form})
-
 
 #view for editing patients
 def EditPatient(request, patient_id):
-    patient = get_object_or_404(Patient, patient_id=patient_id)  # Fix field name
-
+    patient = get_object_or_404(Patient, patient_id=patient_id)
     if request.method == "POST":
         patient_form = PatientForm(request.POST, instance=patient)
         if patient_form.is_valid():
             try:
                 patient_form.save()
-                return redirect("PatientList")  # Ensure this URL name exists
+                return redirect("PatientList")
             except IntegrityError as e:
                 patient_form.add_error(None, f"Database error: {e}")
     else:
         patient_form = PatientForm(instance=patient)
-
     return render(request, "Patients/editpatient.html", {
         "patient_form": patient_form,
         "patient": patient
@@ -105,39 +89,66 @@ def EditPatient(request, patient_id):
 def ViewRecordsSummary(request, patient_id):
     # Fetch the patient
     patient = get_object_or_404(Patient, patient_id=patient_id)
-
+    
     # Fetch appointments related to the patient
     appointments = Appointment.objects.filter(patient=patient)
-
-    # Fetch medical conditions related to the patient
-    medical_records = Condition.objects.filter(patient=patient)
-
-    # Fetch condition details if available
-    condition_details = {}
-    if medical_records.exists():
-        condition = medical_records.first()  # Get the first condition record
+    
+    # Fetch all medical records for comprehensive view
+    conditions = Condition.objects.filter(patient=patient)
+    medications = MedicationStatement.objects.filter(patient=patient)
+    allergies = AllergyIntolerance.objects.filter(patient=patient)
+    procedures = Procedure.objects.filter(patient=patient)
+    immunizations = Immunization.objects.filter(patient=patient)
+    encounters = Encounter.objects.filter(patient=patient)
+    
+    # Get the most recent condition for condition_details
+    condition_details = None
+    if conditions.exists():
+        latest_condition = conditions.order_by('-onset_date').first()
         condition_details = {
-            "id": condition.condition_id,
-            "clinical_status": condition.clinical_status,
-            "verification_status": condition.verification_status,
-            "severity": condition.severity,
-            "onset": condition.onset,
-            "abatement": condition.abatement,
-            "recorded_date": condition.recorded_date,
-            "recorder": condition.recorder.name if condition.recorder else "N/A",
-            "diagnosis": condition.diagnosis,
-            "allergies": condition.allergies,
-            "medications": condition.medications,
-            "test_results": condition.test_results,
+            "id": latest_condition.id,
+            "clinical_status": latest_condition.status,
+            "verification_status": "confirmed",  # Default value since not in model
+            "severity": "moderate",  # Default value since not in model
+            "onset": latest_condition.onset_date,
+            "abatement": None,  # Not in current model
+            "recorded_date": latest_condition.onset_date,
+            "recorder": "System",  # Default value since not in model
+            "diagnosis": latest_condition.description,
+            "code": latest_condition.code,
         }
-
+    
+    # Prepare medical records summary
+    medical_records = []
+    for condition in conditions:
+        medical_records.append({
+            'recorded_date': condition.onset_date,
+            'diagnosis': condition.description,
+            'type': 'Condition'
+        })
+    
+    for procedure in procedures:
+        medical_records.append({
+            'recorded_date': procedure.performed_date,
+            'diagnosis': procedure.procedure_name,
+            'type': 'Procedure'
+        })
+    
+    # Sort medical records by date (most recent first)
+    medical_records.sort(key=lambda x: x['recorded_date'], reverse=True)
+    
     context = {
         "patient": patient,
         "appointments": appointments,
         "medical_records": medical_records,
         "condition_details": condition_details,
+        "conditions": conditions,
+        "medications": medications,
+        "allergies": allergies,
+        "procedures": procedures,
+        "immunizations": immunizations,
+        "encounters": encounters,
     }
-
     return render(request, "Patients/patientsummary.html", context)
 
 def DeletePatient(request, patient_id):

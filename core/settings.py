@@ -25,10 +25,18 @@ SECRET_KEY = 'django-insecure-^9t1wfmsh^e#p@@pe+sb1o2z%d(o-yirb)^*o)(lbofbn!e2$t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # Allow all hosts for local Docker development
 
 
 # Application definition
+
+# Celery Configuration - Updated for Docker
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -40,9 +48,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'Appointments',
     'Practitioner',
-    'fhir_sync',
+    'Fsync',
     'Patients.apps.PatientsConfig',
     'MedicalRecords.apps.MedicalrecordsConfig',
+    'celery',
     #'ckeditor5',
 
 ]
@@ -99,8 +108,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'hms_db',
+        'USER': 'hms_user',
+        'PASSWORD': 'hms_password',
+        'HOST': 'db',  # This matches the Docker service name
+        'PORT': '5432',
     }
 }
 
