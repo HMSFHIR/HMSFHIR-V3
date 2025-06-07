@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HMS - Practitioner Login</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-header i {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .login-header h2 {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-header p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        .form-floating {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .form-floating label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 100%;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .alert {
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .alert-danger {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .alert-success {
+            background: rgba(25, 135, 84, 0.1);
+            color: #198754;
+            border-left: 4px solid #198754;
+        }
+        
+        .footer-text {
+            text-align: center;
+            margin-top: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .input-group-text {
+            background: transparent;
+            border: 2px solid #e9ecef;
+            border-right: none;
+            border-radius: 12px 0 0 12px;
+            color: #667eea;
+        }
+        
+        .input-group .form-control {
+            border-left: none;
+            border-radius: 0 12px 12px 0;
+        }
+        
+        .input-group .btn-outline-secondary {
+            border: 2px solid #e9ecef;
+            border-left: none;
+            border-radius: 0 12px 12px 0;
+            color: #667eea;
+        }
+        
+        .input-group .btn-outline-secondary:hover {
+            background-color: #f8f9fa;
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .btn-login.loading .loading {
+            display: inline-block;
+        }
+        
+        .btn-login.loading .btn-text {
+            display: none;
+        }
+        
+        .field-errors {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        .field-errors i {
+            margin-right: 0.25rem;
+        }
+        
+        @media (max-width: 576px) {
+            .login-container {
+                margin: 1rem;
+                padding: 2rem;
+            }
+            
+            .login-header i {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-7 col-sm-9">
+                <div class="login-container">
+                    <!-- Header -->
+                    <div class="login-header">
+                        <i class="fas fa-user-md"></i>
+                        <h2>Hospital Management System</h2>
+                        <p>Sign in to your practitioner account</p>
+                    </div>
+                    
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="fas {% if message.tags == 'danger' %}fa-exclamation-triangle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Form Errors -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {% for error in form.non_field_errors %}
+                                <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Login Form -->
+                    <form method="post" id="loginForm">
+                        {% csrf_token %}
+                        
+                        <!-- Practitioner ID Field -->
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">
+                                <i class="fas fa-id-badge"></i>
+                            </span>
+                            {{ form.practitioner_id }}
+                        </div>
+                        {% if form.practitioner_id.errors %}
+                            <div class="field-errors mb-3">
+                                {% for error in form.practitioner_id.errors %}
+                                    <div><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Password Field -->
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">
+                                <i class="fas fa-lock"></i>
+                            </span>
+                            {{ form.password }}
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="field-errors mb-3">
+                                {% for error in form.password.errors %}
+                                    <div><i class="fas fa-exclamation-circle"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Remember Me & Forgot Password -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="rememberMe" name="remember_me">
+                                <label class="form-check-label text-muted" for="rememberMe">
+                                    Remember me
+                                </label>
+                            </div>
+                            <a href="#" class="text-decoration-none small" style="color: #667eea;" onclick="alert('Contact IT support for password reset')">
+                                Forgot password?
+                            </a>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary btn-login">
+                            <span class="btn-text">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </span>
+                            <span class="loading">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Signing In...
+                            </span>
+                        </button>
+                    </form>
+                    
+                    <!-- Footer -->
+                    <div class="footer-text">
+                        <p class="mb-0">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Secure practitioner access only
+                        </p>
+                        <small class="text-muted">
+                            Contact IT support if you need assistance
+                        </small>
+                    </div>
+                    
+                    <!-- Demo Credentials (Remove in production) -->
+                    <div class="mt-4 p-3 bg-light rounded" style="font-size: 0.8rem;">
+                        <strong>Demo Credentials:</strong><br>
+                        Admin: ADMIN001 / admin123<br>
+                        Doctor: DOC001 / doctor123<br>
+                        Nurse: NUR001 / nurse123
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Toggle password visibility
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordField = document.getElementById('id_password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        });
+        
+        // Form submission loading state
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            const submitBtn = document.querySelector('.btn-login');
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            
+            // Re-enable button after 10 seconds (in case of slow response)
+            setTimeout(function() {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }, 10000);
+        });
+        
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+        
+        // Add focus effects to input groups
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('.form-control');
+            inputs.forEach(function(input) {
+                input.addEventListener('focus', function() {
+                    const inputGroup = this.closest('.input-group');
+                    if (inputGroup) {
+                        inputGroup.classList.add('focused');
+                    }
+                });
+                
+                input.addEventListener('blur', function() {
+                    const inputGroup = this.closest('.input-group');
+                    if (inputGroup) {
+                        inputGroup.classList.remove('focused');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

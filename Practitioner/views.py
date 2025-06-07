@@ -1,3 +1,5 @@
+
+#Views.py
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404
@@ -47,3 +49,4 @@ def DeletePractitioner(request, practitioner_id):
     practitioner = get_object_or_404(Practitioner, id=practitioner_id)
     practitioner.delete()
     return redirect('Practitioner')  # update with your list view name
+

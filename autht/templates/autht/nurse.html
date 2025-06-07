@@ -1,0 +1,62 @@
+<!-- templates/dashboard/nurse.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nurse Dashboard - HMS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-info">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-user-nurse me-2"></i>HMS Nurse
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    {{ user.get_full_name }} - {{ user.department }}
+                </span>
+                <a class="btn btn-outline-light btn-sm" href="{% url 'logout' %}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <h2>Nurse Dashboard</h2>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h5>Patient Care</h5>
+                                <p>Monitor and care for assigned patients</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h5>Medications</h5>
+                                <p>Administer and track medications</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body">
+                                <h5>Vital Signs</h5>
+                                <p>Record and monitor vital signs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

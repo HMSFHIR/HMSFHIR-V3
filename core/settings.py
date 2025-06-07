@@ -28,6 +28,26 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']  # Allow all hosts for local Docker development
 
 
+
+# Custom user model
+AUTH_USER_MODEL = 'autht.CustomUser'  # Replace 'your_app_name' with your actual app name
+
+# Login/Logout redirects
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+# Message tags for Bootstrap compatibility
+from django.contrib.messages import constants as messages
+MESSAGE_TAGS = {
+    messages.DEBUG: 'debug',
+    messages.INFO: 'info',
+    messages.SUCCESS: 'success',
+    messages.WARNING: 'warning',
+    messages.ERROR: 'danger',  # Bootstrap uses 'danger' instead of 'error'
+}
+
+
 # Application definition
 
 # Celery Configuration - Updated for Docker
@@ -52,8 +72,7 @@ INSTALLED_APPS = [
     'Patients.apps.PatientsConfig',
     'MedicalRecords.apps.MedicalrecordsConfig',
     'celery',
-    #'ckeditor5',
-
+    'autht',
 ]
 
 """
@@ -117,6 +136,10 @@ DATABASES = {
     }
 }
 
+# In settings.py
+LOGIN_URL = '/Practitioners/login/'
+LOGIN_REDIRECT_URL = '/Practitioners/dashboard/'
+LOGOUT_REDIRECT_URL = '/Practitioners/login/'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
