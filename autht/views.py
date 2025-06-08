@@ -93,6 +93,6 @@ def nurse_dashboard(request):
     """Nurse dashboard"""
     if request.user.user_type != 'nurse':
         messages.error(request, 'Access denied. Nurse privileges required.')
-        return redirect('dashboard')
+        return redirect('Dashboard')
     
     return render(request, 'autht/nurse.html', {'user': request.user})

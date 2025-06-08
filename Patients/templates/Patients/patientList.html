@@ -1,71 +1,425 @@
-<!-- patientList.html (Fixed version) -->
-{% extends "Patients/main.html" %}
+<!-- patientList.html (Modern version) -->
+{% extends "autht/main.html" %}
 {% load static %}
-
 {% block PageName %}Patients{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2>Patients</h2>
-                <a href="{% url 'add_patient' %}" class="btn btn-primary">Add New Patient</a>
-            </div>
-            
-            <!-- Search Form -->
-            <form method="get" class="mb-4">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search patients..." value="{{ request.GET.q }}">
-                    <button class="btn btn-outline-secondary" type="submit">🔍</button>
+<style>
+    /* Modern Patient List Styling */
+    .patients-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        background: white;
+        padding: 20px 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .header-left h2 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 10px;
+    }
+
+    .header-stats {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-top: 10px;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    .stat-number {
+        font-weight: 600;
+        color: #4f46e5;
+    }
+
+    .header-right {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .search-form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .search-input {
+        padding: 8px 12px 8px 36px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 14px;
+        width: 250px;
+        position: relative;
+    }
+
+    .search-group {
+        position: relative;
+    }
+
+    .search-group::before {
+        content: '🔍';
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .search-btn {
+        padding: 8px 16px;
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .search-btn:hover {
+        background: #e5e7eb;
+    }
+
+    .add-patient-btn {
+        padding: 10px 20px;
+        background: #4f46e5;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .add-patient-btn:hover {
+        background: #4338ca;
+        color: white;
+        text-decoration: none;
+    }
+
+    .table-wrapper {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 30px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table-header h4 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0;
+    }
+
+    .patients-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+    }
+
+    .patients-table th {
+        background: #f9fafb;
+        padding: 16px 24px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .patients-table td {
+        padding: 16px 24px;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .patients-table tr:hover {
+        background: #f9fafb;
+    }
+
+    .patient-name {
+        font-weight: 500;
+        color: #1a1a1a;
+    }
+
+    .patient-id {
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .actions-cell {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .action-btn:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+        text-decoration: none;
+    }
+
+    .btn-view {
+        color: #0891b2;
+        border-color: #cffafe;
+        background: #f0f9ff;
+    }
+
+    .btn-view:hover {
+        background: #e0f2fe;
+        color: #0891b2;
+    }
+
+    .btn-edit {
+        color: #d97706;
+        border-color: #fed7aa;
+        background: #fffbeb;
+    }
+
+    .btn-edit:hover {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .btn-delete {
+        color: #dc2626;
+        border-color: #fecaca;
+        background: #fef2f2;
+    }
+
+    .btn-delete:hover {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6b7280;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        display: block;
+    }
+
+    .empty-text {
+        font-size: 16px;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .empty-subtext {
+        font-size: 14px;
+        color: #9ca3af;
+        display: block;
+    }
+
+    .gender-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: capitalize;
+    }
+
+    .gender-male {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .gender-female {
+        background: #fce7f3;
+        color: #be185d;
+    }
+
+    .gender-other {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    @media (max-width: 768px) {
+        .header-section {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .header-right {
+            justify-content: space-between;
+        }
+
+        .search-input {
+            width: 200px;
+        }
+
+        .header-stats {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+    }
+</style>
+
+<div class="patients-container">
+    <div class="header-section">
+        <div class="header-left">
+            <h2>👥 Patients</h2>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span>Total Patients:</span>
+                    <span class="stat-number">{{ Patients|length }}</span>
                 </div>
-            </form>
-            
-            <!-- Patient Table -->
-            <div class="card">
-                <div class="table-responsive">
-                    <table class="table table-striped mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Name</th>
-                                <th>Gender</th>
-                                <th>National ID</th>
-                                <th>Patient ID</th>
-                                <th>Last Arrived</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for Patient in Patients %}
-                            <tr>
-                                <td>{{ Patient.name }}</td>
-                                <td>{{ Patient.gender }}</td>
-                                <td>{{ Patient.national_id }}</td>
-                                <td>{{ Patient.patient_id }}</td>
-                                <td>{{ Patient.last_arrived }}</td>
-                                <td>
-                                    {% if Patient.patient_id %}
-                                        <a href="{% url 'ViewRecordsSummary' Patient.patient_id %}" class="btn btn-sm btn-info" title="View">👁️</a>
-                                        <a href="{% url 'EditPatient' Patient.patient_id %}" class="btn btn-sm btn-warning" title="Edit">✏️</a>
-                                        <form method="post" action="{% url 'DeletePatient' Patient.patient_id %}" style="display: inline;">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this patient?')">🗑️</button>
-                                        </form>
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">No patients found</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="stat-item">
+                    <span>Male:</span>
+                    <span class="stat-number">{{ male_count|default:"--" }}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Female:</span>
+                    <span class="stat-number">{{ female_count|default:"--" }}</span>
                 </div>
             </div>
         </div>
+        <div class="header-right">
+            <!-- Search Form -->
+            <form method="get" class="search-form">
+                <div class="search-group">
+                    <input type="text" name="q" class="search-input" placeholder="Search patients..." value="{{ request.GET.q }}">
+                </div>
+                <button class="search-btn" type="submit">Search</button>
+            </form>
+            <a href="{% url 'add_patient' %}" class="add-patient-btn">+ Add New Patient</a>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <div class="table-header">
+            <h4>All Patients</h4>
+            <div class="table-info">
+                {% if request.GET.q %}
+                    <span style="font-size: 14px; color: #6b7280;">
+                        Search results for "{{ request.GET.q }}"
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <table class="patients-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>National ID</th>
+                    <th>Patient ID</th>
+                    <th>Last Arrived</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for Patient in Patients %}
+                <tr>
+                    <td class="patient-name">{{ Patient.name }}</td>
+                    <td>
+                        <span class="gender-badge gender-{{ Patient.gender|lower }}">
+                            {{ Patient.gender }}
+                        </span>
+                    </td>
+                    <td>{{ Patient.national_id }}</td>
+                    <td class="patient-id">{{ Patient.patient_id }}</td>
+                    <td>{{ Patient.last_arrived|default:"-" }}</td>
+                    <td>
+                        <div class="actions-cell">
+                            {% if Patient.patient_id %}
+                                <a href="{% url 'ViewRecordsSummary' Patient.patient_id %}" 
+                                   class="action-btn btn-view" 
+                                   title="View Records">👁️</a>
+                                <a href="{% url 'EditPatient' Patient.patient_id %}" 
+                                   class="action-btn btn-edit" 
+                                   title="Edit Patient">✏️</a>
+                                <form method="post" 
+                                      action="{% url 'DeletePatient' Patient.patient_id %}" 
+                                      style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" 
+                                            class="action-btn btn-delete" 
+                                            title="Delete Patient" 
+                                            onclick="return confirm('Are you sure you want to delete this patient?')">🗑️</button>
+                                </form>
+                            {% else %}
+                                <span style="color: #9ca3af; font-size: 14px;">N/A</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <span class="empty-icon">👥</span>
+                        <span class="empty-text">No patients found</span>
+                        <span class="empty-subtext">
+                            {% if request.GET.q %}
+                                Try adjusting your search terms or <a href="{% url 'add_patient' %}">add a new patient</a>
+                            {% else %}
+                                Add your first patient to get started
+                            {% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

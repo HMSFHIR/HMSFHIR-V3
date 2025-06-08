@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.forms import inlineformset_factory
 from django.utils.timezone import make_aware, is_naive
 from datetime import datetime
-
+from Patients.views import Patient
 from .models import (
     Encounter, Observation, Condition, MedicationStatement,
     Procedure, DocumentReference, AllergyIntolerance, Immunization
@@ -15,7 +15,11 @@ from .forms import (
 
 
 def MedicalRecordsView(request):
-    return render(request, 'MedicalRecords/medical_records.html')
+    patient_count = Patient.objects.count()
+    context = {
+        'patient_count': patient_count,
+    }
+    return render(request, 'MedicalRecords/medical_records.html', context)
 
 
 def add_medical_record(request):

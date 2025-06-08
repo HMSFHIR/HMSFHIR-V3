@@ -7,8 +7,9 @@ from . import views
 
 def AppointmentView(request):
     appointments = Appointment.objects.all().order_by('-appointment_date')
+    
     return render(request, 'Appointments/appointments.html', {
-        'appointments': appointments
+        'appointments': appointments, 
     })
 
 def AddAppointment(request):

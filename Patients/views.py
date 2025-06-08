@@ -22,7 +22,15 @@ class PatientViewSet(viewsets.ModelViewSet):
 # Views for rendering HTML templates
 def Dashboard(request):
     appointments = Appointment.objects.all()  # Fetch all appointments
-    context = {'Appointments': appointments}
+    appointment_count = Appointment.objects.count()
+    pending_appointments = appointments.filter(status='pending').count()
+
+    patient_count = Patient.objects.count()
+    context = {'Appointments': appointments,
+               'patient_count': patient_count,
+               'appointment_count': appointment_count,
+               'pending_appointments': pending_appointments}
+    
     return render(request, "Patients/dashboard.html", context)
 
 def PatientList(request):
@@ -37,6 +45,7 @@ def PatientList(request):
     else:
         Patients = Patient.objects.all()
     context = {'Patients': Patients}
+    
     return render(request, 'Patients/patientList.html', context)
     
 def AppointmentView(request):

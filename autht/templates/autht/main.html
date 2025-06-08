@@ -1,0 +1,392 @@
+<!-- templates/main.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HMS - Hospital Management System{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --navbar-height: 70px;
+            --primary-color: #4F46E5;
+            --secondary-color: #6366F1;
+            --success-color: #10B981;
+            --danger-color: #EF4444;
+            --warning-color: #F59E0B;
+            --info-color: #3B82F6;
+            --light-gray: #F8FAFC;
+            --medium-gray: #E2E8F0;
+            --dark-gray: #64748B;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--light-gray);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Top Navbar */
+        .top-navbar {
+            height: var(--navbar-height);
+            background: white;
+            border-bottom: 1px solid var(--medium-gray);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            justify-content: space-between;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color) !important;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-brand i {
+            margin-right: 0.5rem;
+            font-size: 1.8rem;
+        }
+
+        .navbar-search {
+            flex: 1;
+            max-width: 400px;
+            margin: 0 2rem;
+            position: relative;
+        }
+
+        .navbar-search input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--medium-gray);
+            border-radius: 0.5rem;
+            background-color: var(--light-gray);
+            font-size: 0.875rem;
+        }
+
+        .navbar-search i {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-gray);
+        }
+
+        .navbar-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #1F2937;
+            margin: 0;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--dark-gray);
+            margin: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: var(--navbar-height);
+            left: 0;
+            width: var(--sidebar-width);
+            height: calc(100vh - var(--navbar-height));
+            background: white;
+            border-right: 1px solid var(--medium-gray);
+            overflow-y: auto;
+            z-index: 1020;
+            padding: 1.5rem 0;
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            padding: 0 1.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--dark-gray);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: #374151;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-menu a:hover {
+            background-color: var(--light-gray);
+            color: var(--primary-color);
+        }
+
+        .sidebar-menu a.active {
+            background-color: rgba(79, 70, 229, 0.1);
+            color: var(--primary-color);
+            border-left-color: var(--primary-color);
+        }
+
+        .sidebar-menu a i {
+            width: 20px;
+            margin-right: 0.75rem;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--navbar-height);
+            padding: 2rem;
+            min-height: calc(100vh - var(--navbar-height));
+        }
+
+        /* Logout Button */
+        .logout-btn {
+            background: none;
+            border: 1px solid var(--medium-gray);
+            color: var(--dark-gray);
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background-color: var(--light-gray);
+            border-color: var(--dark-gray);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .navbar-search {
+                display: none;
+            }
+
+            .user-info {
+                display: none;
+            }
+        }
+
+        /* Custom Scrollbar */
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--medium-gray);
+            border-radius: 2px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--dark-gray);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <a href="{% url 'dashboard' %}" class="navbar-brand">
+            <i class="fas fa-hospital"></i>
+            HMSFHIR
+        </a>
+        
+        <div class="navbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search for anything here..." class="form-control">
+        </div>
+
+        <div class="navbar-user">
+            <div class="user-info">
+                <p class="user-name">{{ user.get_full_name|default:user.username }}</p>
+                <p class="user-role">{{ user.user_type|default:'Staff' }}</p>
+            </div>
+            <div class="user-avatar">
+                {{ user.get_full_name.0|default:user.username.0|upper }}
+            </div>
+            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </form>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <!-- Main Navigation -->
+        <div class="sidebar-section">
+            <div class="sidebar-title">Main</div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="{% url 'Dashboard' %}" class="{% if request.resolver_match.url_name == 'Dashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href={% url "AppointmentView" %} class="{% if 'reservations' in request.path %}active{% endif %}">
+                        <i class="fas fa-calendar-check"></i>
+                        Appointments
+                    </a>
+                </li>
+                <li>
+                    <a href={% url "PatientList" %} class="{% if 'patients' in request.path %}active{% endif %}">
+                        <i class="fas fa-users"></i>
+                        Patients
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'MedicalRecordView' %}" class="{% if 'medical_records' in request.path %}active{% endif %}">
+                        <i class="fas fa-file-medical"></i>
+                        Medical Records
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="{% if 'staff' in request.path %}active{% endif %}">
+                        <i class="fas fa-user-md"></i>
+                        Staff List
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <!-- Support Section -->
+        <div class="sidebar-section">
+            <div class="sidebar-title">Support</div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="#" class="{% if 'report' in request.path %}active{% endif %}">
+                        <i class="fas fa-chart-line"></i>
+                        Report
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="{% if 'support' in request.path %}active{% endif %}">
+                        <i class="fas fa-headset"></i>
+                        Customer Support
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        {% block content %}
+        <!-- Page content goes here -->
+        {% endblock %}
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mobile sidebar toggle functionality
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('show');
+        }
+
+        // Search functionality placeholder
+        document.querySelector('.navbar-search input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                // Implement search functionality here
+                console.log('Searching for:', this.value);
+            }
+        });
+
+        // Auto-hide sidebar on mobile when clicking outside
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth <= 768) {
+                const sidebar = document.querySelector('.sidebar');
+                const isClickInsideSidebar = sidebar.contains(e.target);
+                const isClickOnToggle = e.target.classList.contains('sidebar-toggle');
+                
+                if (!isClickInsideSidebar && !isClickOnToggle && sidebar.classList.contains('show')) {
+                    sidebar.classList.remove('show');
+                }
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
