@@ -43,7 +43,7 @@ def EditAppointment(request, appointment_id):
     appointment = get_object_or_404(Appointment, AppointmentID=appointment_id)
 
     if request.method == 'POST':
-        appointment_form = AppointmentForm(request.POST, instance=appointment)
+        appointment_form = AppointmentForms(request.POST, instance=appointment)
         if appointment_form.is_valid():
             try:
                 appointment_form.save()
@@ -51,7 +51,7 @@ def EditAppointment(request, appointment_id):
             except IntegrityError as e:
                 appointment_form.add_error(None, f'Database error: {e}')
     else:
-        appointment_form = AppointmentForm(instance=appointment)
+        appointment_form = AppointmentForms(instance=appointment)
 
     return render(request, 'Appointments/editappointment.html', {
         'appointment_form': appointment_form,
