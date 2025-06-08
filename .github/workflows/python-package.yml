@@ -6,14 +6,13 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12"]  # Removed 3.9, added 3.12
     
     services:
       postgres:
@@ -28,12 +27,11 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4  # Updated to v4
       with:
         python-version: ${{ matrix.python-version }}
     
@@ -75,7 +73,7 @@ jobs:
     - name: Test Django server startup
       run: |
         # Start Django server in background
-        python manage.py runserver 0.0.0.0:8000 &
+        python manage.py runserver 0.0.0.0:8000 --settings=core.settings &
         SERVER_PID=$!
         
         # Wait for server to start
@@ -97,4 +95,4 @@ jobs:
     
     - name: Run Django system checks
       run: |
-        python manage.py check --settings=myproject.settings
+        python manage.py check --settings=core.settings  # Fixed settings path
