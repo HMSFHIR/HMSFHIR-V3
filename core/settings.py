@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,10 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-^9t1wfmsh^e#p@@pe+sb1o2z%d(o-yirb)^*o)(lbofbn!e2$t'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-^9t1wfmsh^e#p@@pe+sb1o2z%d(o-yirb)^*o)(lbofbn!e2$t')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = ['*']  # Allow all hosts for local Docker development
 
@@ -50,9 +51,17 @@ MESSAGE_TAGS = {
 
 # Application definition
 
-# Celery Configuration - Updated for Docker
-CELERY_BROKER_URL = 'redis://redis:6379/0'
-CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+# Celery Configuration - Updated for Docker and CI
+# Use Redis for Docker, disable for CI
+if os.environ.get('CI'):
+    # Disable Celery in CI environment
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+else:
+    # Docker configuration
+    CELERY_BROKER_URL = 'redis://redis:6379/0'
+    CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -125,16 +134,33 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'hms_db',
-        'USER': 'hms_user',
-        'PASSWORD': 'hms_password',
-        'HOST': 'db',  # This matches the Docker service name
-        'PORT': '5432',
+# Database configuration that works with both Docker and CI environments
+if os.environ.get('DATABASE_URL'):
+    # CI environment - use dj-database-url to parse DATABASE_URL
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
     }
-}
+elif os.environ.get('CI'):
+    # Fallback CI configuration with SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'test_db.sqlite3',
+        }
+    }
+else:
+    # Docker/Local development configuration
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'hms_db',
+            'USER': 'hms_user',
+            'PASSWORD': 'hms_password',
+            'HOST': 'db',  # This matches the Docker service name
+            'PORT': '5432',
+        }
+    }
 
 # In settings.py
 LOGIN_URL = '/Practitioners/login/'
@@ -175,7 +201,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.environ.get('STATIC_ROOT', BASE_DIR / 'staticfiles')
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT', BASE_DIR / 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
