@@ -1,61 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doctor Dashboard - HMS</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-user-md me-2"></i>HMS Doctor
-            </a>
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text me-3">
-                    Dr. {{ user.get_full_name }} - {{ user.department }}
-                </span>
-                <a class="btn btn-outline-light btn-sm" href="{% url 'logout' %}">
-                    <i class="fas fa-sign-out-alt me-1"></i>Logout
-                </a>
-            </div>
-        </div>
-    </nav>
-    
-    <div class="container-fluid mt-4">
-        <div class="row">
-            <div class="col-md-12">
-                <h2>Doctor Dashboard</h2>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card bg-info text-white">
-                            <div class="card-body">
-                                <h5>Patients</h5>
-                                <p>View and manage your patients</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card bg-warning text-white">
-                            <div class="card-body">
-                                <h5>Appointments</h5>
-                                <p>Schedule and manage appointments</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card bg-secondary text-white">
-                            <div class="card-body">
-                                <h5>Medical Records</h5>
-                                <p>Access patient medical records</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+{% extends "autht/main.html" %}
+
+
+{% block title %} Doctor Dashboard{% endblock %}
+
+{% block content %}
+<!-- Your page content here -->
+{% endblock %}
