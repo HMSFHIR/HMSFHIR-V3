@@ -84,7 +84,7 @@ def doctor_dashboard(request):
     """Doctor dashboard"""
     if request.user.user_type != 'doctor':
         messages.error(request, 'Access denied. Doctor privileges required.')
-        return redirect('dashboard')
+        return redirect('Dashboard')
     
     return render(request, 'autht/doctor.html', {'user': request.user})
 

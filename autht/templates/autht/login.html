@@ -7,22 +7,29 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f8fafc;
             min-height: 100vh;
             display: flex;
             align-items: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            color: #1a202c;
         }
         
         .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             padding: 3rem;
             width: 100%;
-            max-width: 450px;
+            max-width: 520px;
+            border: 1px solid #e2e8f0;
         }
         
         .login-header {
@@ -31,61 +38,76 @@
         }
         
         .login-header i {
-            font-size: 4rem;
-            color: #667eea;
+            width: 64px;
+            height: 64px;
+            background: #4f46e5;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.75rem;
             margin-bottom: 1rem;
         }
         
         .login-header h2 {
-            color: #333;
+            color: #1a202c;
             font-weight: 600;
+            font-size: 1.5rem;
             margin-bottom: 0.5rem;
         }
         
         .login-header p {
-            color: #666;
-            font-size: 0.95rem;
+            color: #64748b;
+            font-size: 0.875rem;
         }
         
         .form-floating {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
         
         .form-control {
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 1rem 1.2rem;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: white;
+            color: #1a202c;
         }
         
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            outline: none;
+        }
+        
+        .form-control::placeholder {
+            color: #94a3b8;
         }
         
         .form-floating label {
-            color: #666;
+            color: #64748b;
             font-weight: 500;
+            font-size: 0.875rem;
         }
         
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #4f46e5;
             border: none;
-            border-radius: 12px;
-            padding: 1rem;
-            font-size: 1.1rem;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
             width: 100%;
             margin-top: 1rem;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            color: white;
         }
         
         .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            background: #4338ca;
+            transform: translateY(-1px);
         }
         
         .btn-login:active {
@@ -94,53 +116,63 @@
         
         .alert {
             border: none;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
         }
         
         .alert-danger {
-            background: rgba(220, 53, 69, 0.1);
-            color: #dc3545;
-            border-left: 4px solid #dc3545;
+            background: #fef2f2;
+            color: #dc2626;
+            border-left: 4px solid #ef4444;
         }
         
         .alert-success {
-            background: rgba(25, 135, 84, 0.1);
-            color: #198754;
-            border-left: 4px solid #198754;
+            background: #f0fdf4;
+            color: #16a34a;
+            border-left: 4px solid #22c55e;
         }
         
         .footer-text {
             text-align: center;
             margin-top: 2rem;
-            color: #666;
-            font-size: 0.9rem;
+            color: #64748b;
+            font-size: 0.875rem;
         }
         
         .input-group-text {
-            background: transparent;
-            border: 2px solid #e9ecef;
+            background: white;
+            border: 1px solid #e2e8f0;
             border-right: none;
-            border-radius: 12px 0 0 12px;
-            color: #667eea;
+            border-radius: 8px 0 0 8px;
+            color: #64748b;
+            padding: 0.75rem;
         }
         
         .input-group .form-control {
             border-left: none;
-            border-radius: 0 12px 12px 0;
+            border-radius: 0 8px 8px 0;
         }
         
         .input-group .btn-outline-secondary {
-            border: 2px solid #e9ecef;
+            border: 1px solid #e2e8f0;
             border-left: none;
-            border-radius: 0 12px 12px 0;
-            color: #667eea;
+            border-radius: 0 8px 8px 0;
+            color: #64748b;
+            background: white;
+            padding: 0.75rem;
         }
         
         .input-group .btn-outline-secondary:hover {
-            background-color: #f8f9fa;
-            border-color: #667eea;
-            color: #667eea;
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #64748b;
+        }
+        
+        .input-group:focus-within .input-group-text,
+        .input-group:focus-within .btn-outline-secondary {
+            border-color: #4f46e5;
         }
         
         .loading {
@@ -156,13 +188,50 @@
         }
         
         .field-errors {
-            color: #dc3545;
+            color: #dc2626;
             font-size: 0.875rem;
             margin-top: 0.25rem;
         }
         
         .field-errors i {
             margin-right: 0.25rem;
+        }
+
+        .form-check-input:checked {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+
+        .form-check-input:focus {
+            box-shadow: 0 0 0 0.25rem rgba(79, 70, 229, 0.25);
+        }
+
+        .form-check-label {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .text-decoration-none {
+            color: #4f46e5 !important;
+            font-size: 0.875rem;
+        }
+
+        .text-decoration-none:hover {
+            color: #4338ca !important;
+        }
+
+        .demo-credentials {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        .demo-credentials strong {
+            color: #1a202c;
         }
         
         @media (max-width: 576px) {
@@ -172,7 +241,9 @@
             }
             
             .login-header i {
-                font-size: 3rem;
+                width: 56px;
+                height: 56px;
+                font-size: 1.5rem;
             }
         }
     </style>
@@ -180,7 +251,7 @@
 <body>
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-lg-5 col-md-7 col-sm-9">
+            <div class="col-lg-6 col-md-8 col-sm-10">
                 <div class="login-container">
                     <!-- Header -->
                     <div class="login-header">
@@ -250,11 +321,11 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="rememberMe" name="remember_me">
-                                <label class="form-check-label text-muted" for="rememberMe">
+                                <label class="form-check-label" for="rememberMe">
                                     Remember me
                                 </label>
                             </div>
-                            <a href="#" class="text-decoration-none small" style="color: #667eea;" onclick="alert('Contact IT support for password reset')">
+                            <a href="#" class="text-decoration-none small" onclick="alert('Contact IT support for password reset')">
                                 Forgot password?
                             </a>
                         </div>
@@ -281,13 +352,6 @@
                         </small>
                     </div>
                     
-                    <!-- Demo Credentials (Remove in production) -->
-                    <div class="mt-4 p-3 bg-light rounded" style="font-size: 0.8rem;">
-                        <strong>Demo Credentials:</strong><br>
-                        Admin: ADMIN001 / admin123<br>
-                        Doctor: DOC001 / doctor123<br>
-                        Nurse: NUR001 / nurse123
-                    </div>
                 </div>
             </div>
         </div>
