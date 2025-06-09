@@ -35,6 +35,19 @@ class Command(BaseCommand):
                 'is_active': True
             },
             {
+                'practitioner_id': 'IT001',
+                'username': 'IT001',
+                'email': 'it@hospital.com',
+                'first_name': 'Jonas',
+                'last_name': 'Larson',
+                'user_type': 'IT',
+                'department': 'Information Technology',
+                'password': 'it123',
+                'is_staff': True,
+                'is_superuser': False,
+                'is_active': True
+            },
+            {
                 'practitioner_id': 'DOC001',
                 'username': 'DOC001',
                 'email': 'doctor1@hospital.com',
@@ -74,6 +87,10 @@ class Command(BaseCommand):
                     self.stdout.write(
                         self.style.SUCCESS(f'Created ADMIN user: {user.practitioner_id} (can access Django admin)')
                     )
+                elif user.user_type == 'IT':
+                    self.stdout.write(
+                        self.style.SUCCESS(f'Created IT user: {user.practitioner_id} (system access)')
+                    )
                 else:
                     self.stdout.write(
                         self.style.SUCCESS(f'Created user: {user.practitioner_id}')
@@ -85,14 +102,32 @@ class Command(BaseCommand):
         
         # Display login information
         self.stdout.write(
-            self.style.SUCCESS('\n--- ADMIN LOGIN DETAILS ---')
+            self.style.SUCCESS('\n--- LOGIN DETAILS ---')
         )
         self.stdout.write(
-            self.style.SUCCESS('Option 1 - Practitioner ID: ADMIN001, Password: admin123')
+            self.style.SUCCESS('ADMIN Users:')
         )
         self.stdout.write(
-            self.style.SUCCESS('Option 2 - Practitioner ID: ADMIN002, Password: superadmin123')
+            self.style.SUCCESS('  Option 1 - Practitioner ID: ADMIN001, Password: admin123')
         )
         self.stdout.write(
-            self.style.SUCCESS('Admin URL: http://127.0.0.1:8000/admin/')
+            self.style.SUCCESS('  Option 2 - Practitioner ID: ADMIN002, Password: superadmin123')
+        )
+        self.stdout.write(
+            self.style.SUCCESS('\nIT User:')
+        )
+        self.stdout.write(
+            self.style.SUCCESS('  Practitioner ID: IT001, Password: it123')
+        )
+        self.stdout.write(
+            self.style.SUCCESS('\nMedical Staff:')
+        )
+        self.stdout.write(
+            self.style.SUCCESS('  Doctor - Practitioner ID: DOC001, Password: doctor123')
+        )
+        self.stdout.write(
+            self.style.SUCCESS('  Nurse - Practitioner ID: NUR001, Password: nurse123')
+        )
+        self.stdout.write(
+            self.style.SUCCESS('\nAdmin URL: http://127.0.0.1:8000/admin/')
         )

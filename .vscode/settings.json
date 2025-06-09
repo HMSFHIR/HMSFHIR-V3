@@ -1,0 +1,20 @@
+{
+    "dbcode.connections": [
+        {
+            "connectionId": "5C6odl-BSlO8pSpAMN1rm",
+            "name": "hms_db",
+            "driver": "postgres",
+            "color": "#FFC54F",
+            "connectionType": "host",
+            "host": "localhost",
+            "port": 5432,
+            "ssl": false,
+            "username": "hms_user",
+            "password": "",
+            "savePassword": "secretStorage",
+            "readOnly": false,
+            "role": "development",
+            "connectionTimeout": 30
+        }
+    ]
+}
