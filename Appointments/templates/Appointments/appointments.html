@@ -93,32 +93,6 @@ Appointments
         margin: 0;
     }
 
-    .tab-controls {
-        display: flex;
-        gap: 2px;
-        border-radius: 8px;
-        background: #f3f4f6;
-        padding: 4px;
-    }
-
-    .tab-btn {
-        padding: 8px 16px;
-        background: transparent;
-        color: #6b7280;
-        border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .tab-btn.active {
-        background: white;
-        color: #1a1a1a;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
     .search-controls {
         display: flex;
         gap: 12px;
@@ -205,17 +179,6 @@ Appointments
         margin-top: 2px;
     }
 
-    .price-cell {
-        font-weight: 600;
-        color: #1a1a1a;
-    }
-
-    .price-from {
-        font-size: 12px;
-        color: #6b7280;
-        font-weight: 400;
-    }
-
     .duration-cell {
         display: flex;
         align-items: center;
@@ -241,33 +204,6 @@ Appointments
     .visit-multiple {
         background: #fef3c7;
         color: #92400e;
-    }
-
-    .rating-cell {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .rating-stars {
-        display: flex;
-        gap: 2px;
-    }
-
-    .star {
-        color: #fbbf24;
-        font-size: 14px;
-    }
-
-    .rating-score {
-        font-weight: 600;
-        color: #1a1a1a;
-        font-size: 14px;
-    }
-
-    .review-count {
-        font-size: 12px;
-        color: #6b7280;
     }
 
     .actions-cell {
@@ -369,6 +305,17 @@ Appointments
         background: #fef3c7;
         color: #92400e;
     }
+
+    .appointment-date {
+        font-weight: 500;
+        color: #1a1a1a;
+    }
+
+    .appointment-time {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 2px;
+    }
 </style>
 
 <div class="appointments-container">
@@ -379,10 +326,6 @@ Appointments
                 <div class="stat-item">
                     <span>Total Appointments:</span>
                     <span class="stat-number">{{ appointments|length }}</span>
-                </div>
-                <div class="stat-item">
-                    <span>Today's Appointments:</span>
-                    <span class="stat-number">{{ todays_count|default:"0" }}</span>
                 </div>
             </div>
         </div>
@@ -395,10 +338,7 @@ Appointments
 
     <div class="table-wrapper">
         <div class="table-header">
-            <div class="tab-controls">
-                <button class="tab-btn active">Active Appointments</button>
-                <button class="tab-btn">Inactive Appointments</button>
-            </div>
+            <h4>All Appointments</h4>
             <div class="search-controls">
                 <div class="search-box">
                     <input type="text" placeholder="Search appointments..." id="appointmentSearch">
@@ -410,12 +350,10 @@ Appointments
         <table class="appointments-table">
             <thead>
                 <tr>
-                    <th>Appointment Name</th>
-                    <th>Price</th>
-                    <th>Estimated Duration</th>
+                    <th>Patient & Practitioner</th>
+                    <th>Appointment Date</th>
+                    <th>Duration</th>
                     <th>Type of Visit</th>
-                    <th>Rating</th>
-                    <th>Review</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -426,8 +364,9 @@ Appointments
                         <div class="appointment-name">{{ appointment.patient }} - {{ appointment.practitioner }}</div>
                         <div class="appointment-type">{{ appointment.appointment_type|default:"General Checkup" }}</div>
                     </td>
-                    <td class="price-cell">
-                        <span class="price-from">Start from</span> ${{ appointment.price|default:"50" }}
+                    <td>
+                        <div class="appointment-date">{{ appointment.appointment_date|date:"M d, Y" }}</div>
+                        <div class="appointment-time">{{ appointment.appointment_date|time:"h:i A" }}</div>
                     </td>
                     <td class="duration-cell">
                         <span>⏱</span> {{ appointment.duration|default:"1 Hour(s)" }}
@@ -435,13 +374,6 @@ Appointments
                     <td>
                         <span class="visit-type visit-single">Single Visit</span>
                     </td>
-                    <td class="rating-cell">
-                        <div class="rating-stars">
-                            <span class="star">⭐</span>
-                        </div>
-                        <span class="rating-score">{{ appointment.rating|default:"4.5" }}</span>
-                    </td>
-                    <td class="review-count">{{ appointment.review_count|default:"0" }} Review(s)</td>
                     <td>
                         <div class="actions-cell">
                             <a class="btn btn-edit" href="#" title="Edit Appointment">✏️</a>
@@ -454,7 +386,7 @@ Appointments
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="empty-state">
+                    <td colspan="5" class="empty-state">
                         <span class="empty-icon">📅</span>
                         <span class="empty-text">No appointments found</span>
                         <span class="empty-subtext">Add your first appointment to get started</span>
@@ -475,14 +407,6 @@ Appointments
         tableRows.forEach(row => {
             const text = row.textContent.toLowerCase();
             row.style.display = text.includes(searchTerm) ? '' : 'none';
-        });
-    });
-
-    // Tab functionality
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
         });
     });
 </script>

@@ -70,6 +70,28 @@
         color: white;
     }
 
+    .btn-success {
+        background-color: var(--success-color);
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #059669;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-info {
+        background-color: var(--info-color);
+        color: white;
+    }
+
+    .btn-info:hover {
+        background-color: #0284C7;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+    }
+
     /* Stats Cards */
     .stats-grid {
         display: grid;
@@ -148,179 +170,146 @@
         font-weight: 500;
     }
 
-    /* Content Grid */
-    .content-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2rem;
-        margin-bottom: 2rem;
-    }
-
-    .content-card {
+    /* FHIR Actions Section */
+    .fhir-actions {
         background: white;
         border-radius: 12px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         border: 1px solid var(--medium-gray);
         overflow: hidden;
+        margin-bottom: 2rem;
     }
 
-    .card-header {
+    .fhir-header {
         padding: 1.5rem;
         border-bottom: 1px solid var(--medium-gray);
-        display: flex;
-        justify-content: between;
-        align-items: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
     }
 
-    .card-title {
-        font-size: 1.125rem;
+    .fhir-title {
+        font-size: 1.25rem;
         font-weight: 600;
-        color: #1F2937;
         margin: 0;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
     }
 
-    .card-action {
+    .fhir-title i {
+        font-size: 1.5rem;
+    }
+
+    .fhir-subtitle {
         font-size: 0.875rem;
-        color: var(--primary-color);
-        text-decoration: none;
-        font-weight: 500;
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
     }
 
-    .card-action:hover {
-        text-decoration: underline;
+    .fhir-content {
+        padding: 2rem;
     }
 
-    .card-content {
-        padding: 1.5rem;
+    .fhir-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
     }
 
-    /* Recent Patients Table */
-    .patients-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .patients-table th,
-    .patients-table td {
-        padding: 0.75rem;
-        text-align: left;
-        border-bottom: 1px solid var(--medium-gray);
-    }
-
-    .patients-table th {
-        background-color: var(--light-gray);
-        font-weight: 600;
-        color: #374151;
-        font-size: 0.875rem;
-    }
-
-    .patients-table td {
-        font-size: 0.875rem;
-        color: #1F2937;
-    }
-
-    .patients-table tbody tr:hover {
-        background-color: var(--light-gray);
-    }
-
-    .patient-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: var(--primary-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 0.75rem;
-        margin-right: 0.5rem;
-    }
-
-    .patient-info {
-        display: flex;
-        align-items: center;
-    }
-
-    .patient-name {
-        font-weight: 600;
-        color: #1F2937;
-    }
-
-    .patient-id {
-        font-size: 0.75rem;
-        color: var(--dark-gray);
-    }
-
-    .status-badge {
-        padding: 0.25rem 0.75rem;
+    .fhir-button {
+        background: white;
+        border: 2px solid var(--medium-gray);
         border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        padding: 2rem;
+        text-align: center;
+        text-decoration: none;
+        color: #1F2937;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
 
-    .status-active {
-        background-color: #DCFCE7;
+    .fhir-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .fhir-button:hover::before {
+        left: 100%;
+    }
+
+    .fhir-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .fhir-button.pull {
+        border-color: var(--info-color);
+    }
+
+    .fhir-button.pull:hover {
+        border-color: var(--info-color);
+        background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%);
+        color: var(--info-color);
+    }
+
+    .fhir-button.sync {
+        border-color: var(--success-color);
+    }
+
+    .fhir-button.sync:hover {
+        border-color: var(--success-color);
+        background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
         color: var(--success-color);
     }
 
-    .status-inactive {
-        background-color: #FEF2F2;
-        color: var(--danger-color);
+    .fhir-button-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: block;
     }
 
-    .status-pending {
-        background-color: #FEF3C7;
-        color: var(--warning-color);
+    .fhir-button.pull .fhir-button-icon {
+        color: var(--info-color);
     }
 
-    /* Activity Feed */
-    .activity-feed {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
+    .fhir-button.sync .fhir-button-icon {
+        color: var(--success-color);
     }
 
-    .activity-item {
-        display: flex;
-        gap: 0.75rem;
-        padding: 1rem;
-        background-color: var(--light-gray);
-        border-radius: 8px;
-        border-left: 3px solid var(--primary-color);
+    .fhir-button-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
     }
 
-    .activity-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: var(--primary-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 0.75rem;
-        flex-shrink: 0;
-    }
-
-    .activity-content {
-        flex: 1;
-    }
-
-    .activity-text {
+    .fhir-button-description {
         font-size: 0.875rem;
-        color: #1F2937;
-        margin-bottom: 0.25rem;
+        color: var(--dark-gray);
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
     }
 
-    .activity-time {
-        font-size: 0.75rem;
-        color: var(--dark-gray);
+    .fhir-button-action {
+        background-color: transparent;
+        border: 2px solid currentColor;
+        border-radius: 6px;
+        padding: 0.75rem 1.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: inherit;
+        transition: all 0.2s ease;
+    }
+
+    .fhir-button:hover .fhir-button-action {
+        background-color: currentColor;
+        color: white;
     }
 
     /* Quick Actions */
@@ -360,6 +349,32 @@
         font-weight: 600;
     }
 
+    /* Loading States */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+        position: relative;
+    }
+
+    .loading::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
         .dashboard-header {
@@ -378,16 +393,20 @@
             justify-content: center;
         }
 
-        .content-grid {
-            grid-template-columns: 1fr;
-        }
-
         .stats-grid {
             grid-template-columns: 1fr;
         }
 
         .quick-actions {
             grid-template-columns: repeat(2, 1fr);
+        }
+
+        .fhir-buttons {
+            grid-template-columns: 1fr;
+        }
+
+        .fhir-content {
+            padding: 1.5rem;
         }
     }
 </style>
@@ -476,169 +495,39 @@
     </a>
 </div>
 
-<!-- Main Content Grid -->
-<div class="content-grid">
-    <!-- Recent Patients -->
-    <div class="content-card">
-        <div class="card-header">
-            <h3 class="card-title">
-                <i class="fas fa-user-friends"></i>
-                Recent Patients
-            </h3>
-            <a href="{% url 'PatientList' %}" class="card-action">View All</a>
-        </div>
-        <div class="card-content">
-            <table class="patients-table">
-                <thead>
-                    <tr>
-                        <th>Patient</th>
-                        <th>Last Visit</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <div class="patient-info">
-                                <div class="patient-avatar">JD</div>
-                                <div>
-                                    <div class="patient-name">John Doe</div>
-                                    <div class="patient-id">#PAT-001</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>2 hours ago</td>
-                        <td><span class="status-badge status-active">Active</span></td>
-                        <td>
-                            <a href="#" class="card-action">View</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="patient-info">
-                                <div class="patient-avatar">JS</div>
-                                <div>
-                                    <div class="patient-name">Jane Smith</div>
-                                    <div class="patient-id">#PAT-002</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>1 day ago</td>
-                        <td><span class="status-badge status-pending">Pending</span></td>
-                        <td>
-                            <a href="#" class="card-action">View</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="patient-info">
-                                <div class="patient-avatar">MB</div>
-                                <div>
-                                    <div class="patient-name">Michael Brown</div>
-                                    <div class="patient-id">#PAT-003</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>3 days ago</td>
-                        <td><span class="status-badge status-active">Active</span></td>
-                        <td>
-                            <a href="#" class="card-action">View</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="patient-info">
-                                <div class="patient-avatar">SW</div>
-                                <div>
-                                    <div class="patient-name">Sarah Wilson</div>
-                                    <div class="patient-id">#PAT-004</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>1 week ago</td>
-                        <td><span class="status-badge status-inactive">Inactive</span></td>
-                        <td>
-                            <a href="#" class="card-action">View</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="patient-info">
-                                <div class="patient-avatar">DJ</div>
-                                <div>
-                                    <div class="patient-name">David Johnson</div>
-                                    <div class="patient-id">#PAT-005</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>2 weeks ago</td>
-                        <td><span class="status-badge status-active">Active</span></td>
-                        <td>
-                            <a href="#" class="card-action">View</a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+<!-- FHIR Data Management -->
+<div class="fhir-actions">
+    <div class="fhir-header">
+        <h3 class="fhir-title">
+            <i class="fas fa-exchange-alt"></i>
+            FHIR Data Management
+        </h3>
+        <p class="fhir-subtitle">Manage patient data synchronization with FHIR server</p>
     </div>
-
-    <!-- Recent Activity -->
-    <div class="content-card">
-        <div class="card-header">
-            <h3 class="card-title">
-                <i class="fas fa-clock"></i>
-                Recent Activity
-            </h3>
-            <a href="#" class="card-action">View All</a>
-        </div>
-        <div class="card-content">
-            <div class="activity-feed">
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-text">New patient John Doe registered</div>
-                        <div class="activity-time">2 minutes ago</div>
-                    </div>
+    <div class="fhir-content">
+        <div class="fhir-buttons">
+            <div class="fhir-button pull" id="pullDataBtn">
+                <i class="fas fa-download fhir-button-icon"></i>
+                <div class="fhir-button-title">Pull Patient Data</div>
+                <div class="fhir-button-description">
+                    Retrieve the latest patient information from the FHIR server and update local records
                 </div>
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-text">Appointment scheduled for Jane Smith</div>
-                        <div class="activity-time">15 minutes ago</div>
-                    </div>
+                <button class="fhir-button-action" onclick="pullPatientData()">
+                    <i class="fas fa-download"></i>
+                    Pull Data
+                </button>
+            </div>
+            
+            <div class="fhir-button sync" id="syncDataBtn">
+                <i class="fas fa-sync-alt fhir-button-icon"></i>
+                <div class="fhir-button-title">Manual Sync</div>
+                <div class="fhir-button-description">
+                    Manually synchronize patient data between local database and FHIR server
                 </div>
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="fas fa-file-medical"></i>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-text">Medical record updated for Michael Brown</div>
-                        <div class="activity-time">1 hour ago</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="fas fa-pills"></i>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-text">Prescription issued to Sarah Wilson</div>
-                        <div class="activity-time">2 hours ago</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-text">Patient David Johnson checked in</div>
-                        <div class="activity-time">3 hours ago</div>
-                    </div>
-                </div>
+                <button class="fhir-button-action" onclick="syncPatientData()">
+                    <i class="fas fa-sync-alt"></i>
+                    Start Sync
+                </button>
             </div>
         </div>
     </div>
@@ -669,20 +558,149 @@
             window.requestAnimationFrame(step);
         }
 
-        // Auto-refresh activity feed every 30 seconds
-        setInterval(function() {
-            // This would typically fetch new data from your backend
-            console.log('Refreshing activity feed...');
-        }, 30000);
-
         // Add click tracking for quick actions
         const quickActions = document.querySelectorAll('.quick-action');
         quickActions.forEach(action => {
             action.addEventListener('click', function(e) {
-                // Add analytics tracking here
                 console.log('Quick action clicked:', this.querySelector('.quick-action-text').textContent);
             });
         });
     });
+
+    // FHIR Data Management Functions
+    function pullPatientData() {
+        const btn = document.getElementById('pullDataBtn');
+        const actionBtn = btn.querySelector('.fhir-button-action');
+        
+        // Add loading state
+        btn.classList.add('loading');
+        actionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pulling...';
+        actionBtn.disabled = true;
+        
+        // Simulate API call - replace with actual FHIR server call
+        fetch('/api/fhir/pull-patients/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Patient data pulled successfully!', 'success');
+                // Optionally refresh stats
+                location.reload();
+            } else {
+                showNotification('Failed to pull patient data: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error occurred while pulling data', 'error');
+        })
+        .finally(() => {
+            // Remove loading state
+            btn.classList.remove('loading');
+            actionBtn.innerHTML = '<i class="fas fa-download"></i> Pull Data';
+            actionBtn.disabled = false;
+        });
+    }
+
+    function syncPatientData() {
+        const btn = document.getElementById('syncDataBtn');
+        const actionBtn = btn.querySelector('.fhir-button-action');
+        
+        // Add loading state
+        btn.classList.add('loading');
+        actionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+        actionBtn.disabled = true;
+        
+        // Simulate API call - replace with actual sync endpoint
+        fetch('/api/fhir/sync-patients/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Patient data synchronized successfully!', 'success');
+                // Optionally refresh stats
+                location.reload();
+            } else {
+                showNotification('Failed to sync patient data: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error occurred during synchronization', 'error');
+        })
+        .finally(() => {
+            // Remove loading state
+            btn.classList.remove('loading');
+            actionBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Start Sync';
+            actionBtn.disabled = false;
+        });
+    }
+
+    // Utility Functions
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        `;
+        
+        if (type === 'success') {
+            notification.style.backgroundColor = '#10B981';
+        } else if (type === 'error') {
+            notification.style.backgroundColor = '#EF4444';
+        }
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 5000);
+    }
 </script>
 {% endblock %}

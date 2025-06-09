@@ -5,96 +5,344 @@
 {% block PageName %}New Medical Record{% endblock %}
 
 {% block content %}
-<div class="form-container">
-    <h2>🩺 Encounter Details</h2>
-    <form method="POST" enctype="multipart/form-data">
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">Add Medical Record</h1>
+        <p class="page-subtitle">Complete patient encounter documentation</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="medical-form">
         {% csrf_token %}
-        <div class="form-section">
-            {{ encounter_form.as_p }}
-        </div>
-
-        <hr>
-        <h3>🧪 Observations</h3>
-        <div class="form-section">
-            {{ obs_formset.management_form }}
-            {% for form in obs_formset %}
-                <div class="form-inline">
-                    {{ form.as_p }}
+        
+        <!-- Encounter Details Card -->
+        <div class="form-card">
+            <div class="card-header">
+                <div class="card-icon encounter-icon">🩺</div>
+                <div class="card-title">
+                    <h3>Encounter Details</h3>
+                    <span class="card-subtitle">Basic visit information</span>
                 </div>
-                <hr>
-            {% endfor %}
+            </div>
+            <div class="card-content">
+                {{ encounter_form.as_p }}
+            </div>
         </div>
 
-        <h3>📋 Conditions</h3>
-        <div class="form-section">
-            {{ cond_formset.management_form }}
-            {% for form in cond_formset %}
-                <div class="form-inline">
-                    {{ form.as_p }}
+        <!-- Observations Card -->
+        <div class="form-card">
+            <div class="card-header">
+                <div class="card-icon obs-icon">🧪</div>
+                <div class="card-title">
+                    <h3>Observations</h3>
+                    <span class="card-subtitle">Clinical measurements and findings</span>
                 </div>
-                <hr>
-            {% endfor %}
+            </div>
+            <div class="card-content">
+                {{ obs_formset.management_form }}
+                {% for form in obs_formset %}
+                    <div class="form-group-inline">
+                        {{ form.as_p }}
+                    </div>
+                    {% if not forloop.last %}<div class="form-divider"></div>{% endif %}
+                {% endfor %}
+            </div>
         </div>
 
-        <h3>💊 Medications</h3>
-        <div class="form-section">
-            {{ med_formset.management_form }}
-            {% for form in med_formset %}
-                <div class="form-inline">
-                    {{ form.as_p }}
+        <!-- Conditions Card -->
+        <div class="form-card">
+            <div class="card-header">
+                <div class="card-icon cond-icon">📋</div>
+                <div class="card-title">
+                    <h3>Conditions</h3>
+                    <span class="card-subtitle">Diagnosed conditions and assessments</span>
                 </div>
-                <hr>
-            {% endfor %}
+            </div>
+            <div class="card-content">
+                {{ cond_formset.management_form }}
+                {% for form in cond_formset %}
+                    <div class="form-group-inline">
+                        {{ form.as_p }}
+                    </div>
+                    {% if not forloop.last %}<div class="form-divider"></div>{% endif %}
+                {% endfor %}
+            </div>
         </div>
 
-        <h3>🏥 Procedures</h3>
-        <div class="form-section">
-            {{ proc_formset.management_form }}
-            {% for form in proc_formset %}
-                <div class="form-inline">
-                    {{ form.as_p }}
+        <!-- Medications Card -->
+        <div class="form-card">
+            <div class="card-header">
+                <div class="card-icon med-icon">💊</div>
+                <div class="card-title">
+                    <h3>Medications</h3>
+                    <span class="card-subtitle">Prescribed medications and dosages</span>
                 </div>
-                <hr>
-            {% endfor %}
+            </div>
+            <div class="card-content">
+                {{ med_formset.management_form }}
+                {% for form in med_formset %}
+                    <div class="form-group-inline">
+                        {{ form.as_p }}
+                    </div>
+                    {% if not forloop.last %}<div class="form-divider"></div>{% endif %}
+                {% endfor %}
+            </div>
         </div>
 
-        <button type="submit" class="btn btn-primary">💾 Save Medical Record</button>
+        <!-- Procedures Card -->
+        <div class="form-card">
+            <div class="card-header">
+                <div class="card-icon proc-icon">🏥</div>
+                <div class="card-title">
+                    <h3>Procedures</h3>
+                    <span class="card-subtitle">Performed procedures and treatments</span>
+                </div>
+            </div>
+            <div class="card-content">
+                {{ proc_formset.management_form }}
+                {% for form in proc_formset %}
+                    <div class="form-group-inline">
+                        {{ form.as_p }}
+                    </div>
+                    {% if not forloop.last %}<div class="form-divider"></div>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+                <span class="btn-icon">💾</span>
+                Save Medical Record
+            </button>
+        </div>
     </form>
 </div>
 
 <style>
-    .form-container {
-        max-width: 1000px;
-        margin: auto;
-        padding: 2rem;
-        background-color: #f9f9f9;
-        border-radius: 1rem;
-        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    .page-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+        background-color: #f8fafc;
+        min-height: 100vh;
     }
-    .form-section {
+
+    .page-header {
         margin-bottom: 2rem;
+        text-align: center;
     }
-    .form-inline {
-        border-left: 4px solid #0077cc;
-        padding-left: 1rem;
-        margin-bottom: 1rem;
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
     }
-    h2, h3 {
-        color: #333;
-        border-bottom: 2px solid #0077cc;
-        padding-bottom: 0.3rem;
-    }
-    .btn-primary {
-        background-color: #0077cc;
-        color: white;
-        padding: 0.7rem 1.5rem;
-        border: none;
-        border-radius: 0.5rem;
+
+    .page-subtitle {
+        color: #64748b;
         font-size: 1rem;
+        margin: 0;
+    }
+
+    .medical-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        transition: all 0.2s ease;
+    }
+
+    .form-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .card-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        margin-right: 1rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .card-title h3 {
+        color: white;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        border: none;
+        padding: 0;
+    }
+
+    .card-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .card-content {
+        padding: 1.5rem;
+    }
+
+    .form-group-inline {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .form-group-inline:hover {
+        border-color: #4f46e5;
+        background: #f1f5f9;
+    }
+
+    .form-group-inline:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+        margin: 1rem 0;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding: 1.5rem 0;
+        border-top: 1px solid #e2e8f0;
+        margin-top: 1rem;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.875rem;
         cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        text-decoration: none;
     }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+    }
+
     .btn-primary:hover {
-        background-color: #005fa3;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
     }
+
+    .btn-secondary {
+        background: white;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .btn-icon {
+        font-size: 1rem;
+    }
+
+    /* Form field styling */
+    .form-group-inline p {
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group-inline p:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-group-inline label {
+        font-weight: 500;
+        color: #374151;
+        font-size: 0.875rem;
+    }
+
+    .form-group-inline input,
+    .form-group-inline select,
+    .form-group-inline textarea {
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        background: white;
+    }
+
+    .form-group-inline input:focus,
+    .form-group-inline select:focus,
+    .form-group-inline textarea:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .page-container {
+            padding: 1rem 0.5rem;
+        }
+
+        .card-header {
+            padding: 1rem;
+        }
+
+        .card-content {
+            padding: 1rem;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            justify-content: center;
+        }
+    }
+
+    /* Color variations for different card types */
+    .encounter-icon { background: rgba(34, 197, 94, 0.2); }
+    .obs-icon { background: rgba(249, 115, 22, 0.2); }
+    .cond-icon { background: rgba(239, 68, 68, 0.2); }
+    .med-icon { background: rgba(168, 85, 247, 0.2); }
+    .proc-icon { background: rgba(59, 130, 246, 0.2); }
 </style>
 {% endblock %}

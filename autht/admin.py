@@ -11,14 +11,30 @@ class CustomUserAdmin(UserAdmin):
     search_fields = ('practitioner_id', 'first_name', 'last_name', 'email')
     ordering = ('practitioner_id',)
     
-    fieldsets = UserAdmin.fieldsets + (
+    # Override fieldsets to use practitioner_id instead of username
+    fieldsets = (
+        (None, {'fields': ('practitioner_id', 'password')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
         ('Hospital Information', {
-            'fields': ('practitioner_id', 'user_type', 'department', 'phone_number', 'is_active_practitioner')
+            'fields': ('user_type', 'department', 'phone_number', 'is_active_practitioner')
         }),
+        ('Permissions', {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+        }),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
     
-    add_fieldsets = UserAdmin.add_fieldsets + (
+    # Override add_fieldsets for creating new users
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('practitioner_id', 'password1', 'password2'),
+        }),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
         ('Hospital Information', {
-            'fields': ('practitioner_id', 'user_type', 'department', 'phone_number', 'is_active_practitioner')
+            'fields': ('user_type', 'department', 'phone_number', 'is_active_practitioner')
+        }),
+        ('Permissions', {
+            'fields': ('is_active', 'is_staff', 'is_superuser'),
         }),
     )
