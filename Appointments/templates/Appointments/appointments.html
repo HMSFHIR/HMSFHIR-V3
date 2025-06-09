@@ -1,43 +1,489 @@
 {% extends "autht/main.html" %}
-
-{% block PageName %}Appointments{% endblock PageName %}
+{% block title %}
+Appointments
+{% endblock %}
 
 {% block content %}
-    <section class="operations">
-        <a href="{% url 'add_appointment' %}" class="newPatient">Add Appointment</a>
-    </section>
+<style>
+    /* Modern Appointments Styling */
+    .appointments-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
 
-    <table class="patients-table">
-        <thead>
-            <tr>
-                <th>Actions</th>
-                <th>Appointment ID</th>
-                <th>Patient</th>
-                <th>Practitioner</th>
-                <th>Date</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for appointment in appointments %}
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        background: white;
+        padding: 20px 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .header-left h3 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 10px;
+    }
+
+    .header-stats {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-top: 10px;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    .stat-number {
+        font-weight: 600;
+        color: #4f46e5;
+    }
+
+    .navbar-top {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .newAppointment {
+        padding: 10px 20px;
+        background: #4f46e5;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .newAppointment:hover {
+        background: #4338ca;
+    }
+
+    .table-wrapper {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 30px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table-header h4 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0;
+    }
+
+    .tab-controls {
+        display: flex;
+        gap: 2px;
+        border-radius: 8px;
+        background: #f3f4f6;
+        padding: 4px;
+    }
+
+    .tab-btn {
+        padding: 8px 16px;
+        background: transparent;
+        color: #6b7280;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+        background: white;
+        color: #1a1a1a;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .search-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .search-box {
+        position: relative;
+    }
+
+    .search-box input {
+        padding: 8px 12px 8px 36px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 14px;
+        width: 250px;
+    }
+
+    .search-box::before {
+        content: '🔍';
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        pointer-events: none;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+        background: #e5e7eb;
+    }
+
+    .appointments-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+    }
+
+    .appointments-table th {
+        background: #f9fafb;
+        padding: 16px 24px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .appointments-table td {
+        padding: 16px 24px;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .appointments-table tr:hover {
+        background: #f9fafb;
+    }
+
+    .appointment-name {
+        font-weight: 500;
+        color: #1a1a1a;
+    }
+
+    .appointment-type {
+        font-size: 12px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 2px;
+    }
+
+    .price-cell {
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .price-from {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 400;
+    }
+
+    .duration-cell {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    .visit-type {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .visit-single {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    .visit-multiple {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .rating-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .rating-stars {
+        display: flex;
+        gap: 2px;
+    }
+
+    .star {
+        color: #fbbf24;
+        font-size: 14px;
+    }
+
+    .rating-score {
+        font-weight: 600;
+        color: #1a1a1a;
+        font-size: 14px;
+    }
+
+    .review-count {
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    .actions-cell {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .btn:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+    }
+
+    .btn-edit {
+        color: #0891b2;
+        border-color: #cffafe;
+        background: #f0f9ff;
+    }
+
+    .btn-edit:hover {
+        background: #e0f2fe;
+    }
+
+    .btn-delete {
+        color: #dc2626;
+        border-color: #fecaca;
+        background: #fef2f2;
+    }
+
+    .btn-delete:hover {
+        background: #fee2e2;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6b7280;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        display: block;
+    }
+
+    .empty-text {
+        font-size: 16px;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .empty-subtext {
+        font-size: 14px;
+        color: #9ca3af;
+        display: block;
+    }
+
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-scheduled {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-completed {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-cancelled {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+</style>
+
+<div class="appointments-container">
+    <div class="header-section">
+        <div class="header-left">
+            <h3>📅 Appointments</h3>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span>Total Appointments:</span>
+                    <span class="stat-number">{{ appointments|length }}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Today's Appointments:</span>
+                    <span class="stat-number">{{ todays_count|default:"0" }}</span>
+                </div>
+            </div>
+        </div>
+        <nav class="navbar-top">
+            <section class="operations">
+                <a href="{% url 'add_appointment' %}" class="newAppointment">+ Add Appointment</a>
+            </section>
+        </nav>
+    </div>
+
+    <div class="table-wrapper">
+        <div class="table-header">
+            <div class="tab-controls">
+                <button class="tab-btn active">Active Appointments</button>
+                <button class="tab-btn">Inactive Appointments</button>
+            </div>
+            <div class="search-controls">
+                <div class="search-box">
+                    <input type="text" placeholder="Search appointments..." id="appointmentSearch">
+                </div>
+                <button class="filter-btn">Filters</button>
+            </div>
+        </div>
+
+        <table class="appointments-table">
+            <thead>
                 <tr>
-                    <td class="patient-actions">
-                        <form method="post" action="{% url 'DeleteAppointment' appointment.appointment_id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-delete" 
-                                    onclick="return confirm('Delete appointment #{{ appointment.appointment_id }}?')">
-                                🗑️
-                            </button>
-                        </form>
-                        <a href="#" class="btn btn-edit" type="submit" onclick="{% url 'EditAppointment' appointment.appointment_id%}">Edit</a>
-                    </td>
-                    <td>{{ appointment.id }}</td>
-                    <td>{{ appointment.patient }}</td>
-                    <td>{{ appointment.practitioner }}</td>
-                    <td>{{ appointment.appointment_date }}</td>
-                    <td>{{ appointment.status }}</td>
+                    <th>Appointment Name</th>
+                    <th>Price</th>
+                    <th>Estimated Duration</th>
+                    <th>Type of Visit</th>
+                    <th>Rating</th>
+                    <th>Review</th>
+                    <th>Actions</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for appointment in appointments %}
+                <tr>
+                    <td>
+                        <div class="appointment-name">{{ appointment.patient }} - {{ appointment.practitioner }}</div>
+                        <div class="appointment-type">{{ appointment.appointment_type|default:"General Checkup" }}</div>
+                    </td>
+                    <td class="price-cell">
+                        <span class="price-from">Start from</span> ${{ appointment.price|default:"50" }}
+                    </td>
+                    <td class="duration-cell">
+                        <span>⏱</span> {{ appointment.duration|default:"1 Hour(s)" }}
+                    </td>
+                    <td>
+                        <span class="visit-type visit-single">Single Visit</span>
+                    </td>
+                    <td class="rating-cell">
+                        <div class="rating-stars">
+                            <span class="star">⭐</span>
+                        </div>
+                        <span class="rating-score">{{ appointment.rating|default:"4.5" }}</span>
+                    </td>
+                    <td class="review-count">{{ appointment.review_count|default:"0" }} Review(s)</td>
+                    <td>
+                        <div class="actions-cell">
+                            <a class="btn btn-edit" href="#" title="Edit Appointment">✏️</a>
+                            <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this appointment?');">
+                                {% csrf_token %}
+                                <button type="submit" name="delete_appointment" value="{{ appointment.id }}" class="btn btn-delete" title="Delete Appointment">🗑️</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <span class="empty-icon">📅</span>
+                        <span class="empty-text">No appointments found</span>
+                        <span class="empty-subtext">Add your first appointment to get started</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Simple search functionality
+    document.getElementById('appointmentSearch').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const tableRows = document.querySelectorAll('.appointments-table tbody tr');
+        
+        tableRows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+
+    // Tab functionality
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+</script>
 {% endblock %}
