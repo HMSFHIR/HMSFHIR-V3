@@ -3,7 +3,8 @@ from django.urls import path
 from . import views
 from Patients.views import Dashboard, PatientList, AppointmentView, FHIRSync
 from MedicalRecords.views import MedicalRecordsView
-
+from Practitioner.views import Practitioners
+from Fsync.views import admin_dashboard
 
 urlpatterns = [
     path('', views.practitioner_login, name='login'),
@@ -13,6 +14,7 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('doctor-dashboard/', views.doctor_dashboard, name='doctor_dashboard'),
     path('nurse-dashboard/', views.nurse_dashboard, name='nurse_dashboard'),
+    
 
 
     #Urls to access the views in Patients app
@@ -24,4 +26,10 @@ urlpatterns = [
 
     #Urls to access the views in Medical Records app
     path("MedicalRecordView", MedicalRecordsView, name="MedicalRecordView"),
+
+    #Urls to access the views in Practitioners app
+    path("Practitioners", Practitioners, name="Practitioners"),
+
+    #Urls to access the views in FHIR Sync app
+    path("admin_dashboard", admin_dashboard, name="admin_dashboard"),
 ]

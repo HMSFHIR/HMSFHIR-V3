@@ -304,42 +304,93 @@
                         Dashboard
                     </a>
                 </li>
+                
+                <!-- Show appointments for all roles except IT -->
+                {% if user.user_type != 'IT' %}
                 <li>
-                    <a href={% url "AppointmentView" %} class="{% if 'reservations' in request.path %}active{% endif %}">
+                    <a href="{% url 'AppointmentView' %}" class="{% if 'reservations' in request.path %}active{% endif %}">
                         <i class="fas fa-calendar-check"></i>
                         Appointments
                     </a>
                 </li>
+                {% endif %}
+                
+                <!-- Show patients for all roles except IT -->
+                {% if user.user_type != 'IT' %}
                 <li>
-                    <a href={% url "PatientList" %} class="{% if 'patients' in request.path %}active{% endif %}">
+                    <a href="{% url 'PatientList' %}" class="{% if 'patients' in request.path %}active{% endif %}">
                         <i class="fas fa-users"></i>
                         Patients
                     </a>
                 </li>
+                {% endif %}
+                
+                <!-- Show medical records for all roles except IT -->
+                {% if user.user_type != 'IT' %}
                 <li>
                     <a href="{% url 'MedicalRecordView' %}" class="{% if 'medical_records' in request.path %}active{% endif %}">
                         <i class="fas fa-file-medical"></i>
                         Medical Records
                     </a>
                 </li>
+                {% endif %}
+                
+                <!-- Show practitioners for admin and IT only -->
+                {% if user.user_type == 'admin' or user.user_type == 'IT' %}
+                <li>
+                    <a href="{% url 'Practitioners' %}" class="{% if 'practitioners' in request.path %}active{% endif %}">
+                        <i class="fas fa-user-md"></i>
+                        Practitioners
+                    </a>
+                </li>
+                {% endif %}
+                
+                <!-- Show staff list for admin and IT only -->
+                {% if user.user_type == 'admin' or user.user_type == 'IT' %}
                 <li>
                     <a href="#" class="{% if 'staff' in request.path %}active{% endif %}">
-                        <i class="fas fa-user-md"></i>
+                        <i class="fas fa-users-cog"></i>
                         Staff List
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- System Section - Admin and IT only -->
+        {% if user.user_type == 'admin' or user.user_type == 'IT' %}
+        <div class="sidebar-section">
+            <div class="sidebar-title">System</div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="{% url 'admin_dashboard' %}" class="{% if 'fhir' in request.path %}active{% endif %}">
+                        <i class="fas fa-sync-alt"></i>
+                        FHIR Sync
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="{% if 'logs' in request.path %}active{% endif %}"> 
+                        <i class="fas fa-clipboard-list"></i>
+                        Logs
                     </a>
                 </li>
             </ul>
         </div>
+        {% endif %}
+        
         <!-- Support Section -->
         <div class="sidebar-section">
             <div class="sidebar-title">Support</div>
             <ul class="sidebar-menu">
+                <!-- Show reports for admin and IT only -->
+                {% if user.user_type == 'admin' or user.user_type == 'IT' %}
                 <li>
                     <a href="#" class="{% if 'report' in request.path %}active{% endif %}">
                         <i class="fas fa-chart-line"></i>
                         Report
                     </a>
                 </li>
+                {% endif %}
                 <li>
                     <a href="#" class="{% if 'support' in request.path %}active{% endif %}">
                         <i class="fas fa-headset"></i>
