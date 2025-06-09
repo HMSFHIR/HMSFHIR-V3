@@ -280,7 +280,7 @@
                 <p class="user-role">{{ user.user_type|default:'Staff' }}</p>
             </div>
             <div class="user-avatar">
-                {{ user.get_full_name.0|default:user.username.0|upper }}
+                {{ user.get_full_name|default:user.username|default:"U"|first|upper }}
             </div>
             <form method="post" action="{% url 'logout' %}" style="margin: 0;">
                 {% csrf_token %}

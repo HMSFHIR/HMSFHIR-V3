@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.urls import reverse
 from .forms import PractitionerLoginForm
 
+
 def practitioner_login(request):
     """Handle practitioner login"""
     if request.user.is_authenticated:
@@ -75,7 +76,7 @@ def admin_dashboard(request):
     """Admin dashboard"""
     if request.user.user_type != 'admin':
         messages.error(request, 'Access denied. Admin privileges required.')
-        return redirect('dashboard')
+        return redirect('practitioner_login')
     
     return render(request, 'dashboard/admin.html', {'user': request.user})
 
@@ -84,15 +85,15 @@ def doctor_dashboard(request):
     """Doctor dashboard"""
     if request.user.user_type != 'doctor':
         messages.error(request, 'Access denied. Doctor privileges required.')
-        return redirect('Dashboard')
+        return redirect('practitioner_login')
     
-    return render(request, 'autht/doctor.html', {'user': request.user})
+    return render(request, 'Patients/dashboard.html', {'user': request.user})
 
 @login_required
 def nurse_dashboard(request):
     """Nurse dashboard"""
     if request.user.user_type != 'nurse':
         messages.error(request, 'Access denied. Nurse privileges required.')
-        return redirect('Dashboard')
-    
-    return render(request, 'autht/nurse.html', {'user': request.user})
+        return redirect('practitioner_login')
+
+    return render(request, 'Patients/dashboard.html', {'user': request.user})

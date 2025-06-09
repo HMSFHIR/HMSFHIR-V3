@@ -43,15 +43,22 @@ def add_medical_record(request):
             proc_formset.is_valid()
         ]):
             encounter = encounter_form.save()
+            
+            # Set the instance for all formsets
             obs_formset.instance = encounter
             cond_formset.instance = encounter
             med_formset.instance = encounter
             proc_formset.instance = encounter
 
-            obs_formset.save()
-            cond_formset.save()
-            med_formset.save()
-            proc_formset.save()
+            # Save formsets and set patient for each instance
+            for formset in [obs_formset, cond_formset, med_formset, proc_formset]:
+                instances = formset.save(commit=False)
+                for instance in instances:
+                    # Set the patient from the encounter
+                    instance.patient = encounter.patient
+                    instance.save()
+                # Save any remaining instances
+                formset.save_m2m()
 
             return redirect('MedicalRecords')
 
