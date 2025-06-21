@@ -14,9 +14,20 @@ from django.apps import apps
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 
-# Your other model imports
-from Patients.models import Patient  # Replace with your actual models
 logger = logging.getLogger(__name__)
+
+def get_resource_id(record):
+    """Get appropriate resource ID based on record type"""
+    # For Patient model, use patient_id
+    if hasattr(record, 'patient_id') and record.patient_id:
+        return str(record.patient_id)
+    
+    # For other models, check for specific ID fields
+    if hasattr(record, 'practitioner_id') and record.practitioner_id:
+        return str(record.practitioner_id)
+    
+    # Fall back to primary key
+    return str(record.id)
 
 @shared_task(bind=True, max_retries=3)
 def process_sync_queue_task(self, limit=50):
@@ -60,7 +71,8 @@ def full_sync_task(self, resource_types=None):
                 for record in queryset:
                     try:
                         fhir_data = mapper_func(record)
-                        resource_id = str(getattr(record, 'id'))
+                        # UPDATED: Use appropriate resource ID
+                        resource_id = get_resource_id(record)
                         
                         SyncQueueManager.queue_resource(
                             resource_type=rule.resource_type,
@@ -72,7 +84,7 @@ def full_sync_task(self, resource_types=None):
                         total_queued += 1
                         
                     except Exception as e:
-                        logger.error(f"Failed to queue {rule.resource_type} {record.id}: {e}")
+                        logger.error(f"Failed to queue {rule.resource_type} {get_resource_id(record)}: {e}")
                         continue
                         
             except Exception as e:
@@ -156,4 +168,43 @@ def sync_single_resource_task(resource_type, resource_id, operation='create'):
         return {'error': 'Queue item not found'}
     except Exception as e:
         logger.error(f"Single resource sync failed: {e}")
+        return {'error': str(e)}
+
+# UPDATED: Specific task for Patient sync
+@shared_task
+def sync_patient_task(patient_id, operation='update'):
+    """Sync a specific patient"""
+    try:
+        # Get Patient model dynamically
+        Patient = apps.get_model('Patients', 'Patient')  # Adjust app name as needed
+        patient = Patient.objects.get(patient_id=patient_id)
+        
+        # Get FHIR data using patient's built-in method
+        fhir_data = patient.to_fhir_dict()
+        
+        # Queue for sync
+        queue_item = SyncQueueManager.queue_resource(
+            resource_type='Patient',
+            resource_id=patient_id,
+            fhir_data=fhir_data,
+            operation=operation,
+            source_object=patient,
+            priority=60  # High priority for individual syncs
+        )
+        
+        # Process immediately
+        sync_service = FHIRSyncService()
+        success = sync_service.sync_resource(queue_item)
+        
+        return {
+            'success': success,
+            'patient_id': patient_id,
+            'fhir_id': queue_item.fhir_id,
+            'status': queue_item.status
+        }
+        
+    except Patient.DoesNotExist:
+        return {'error': f'Patient {patient_id} not found'}
+    except Exception as e:
+        logger.error(f"Patient sync failed: {e}")
         return {'error': str(e)}
