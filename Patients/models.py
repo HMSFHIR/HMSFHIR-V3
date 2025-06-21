@@ -1,31 +1,225 @@
 from django.db import models
-from Practitioner.models import Practitioner
-from datetime import date
+from django.core.validators import RegexValidator
 from django.utils import timezone
+from django.conf import settings
+from datetime import date
+import uuid
 
-#  Patient Model (FHIR-Compatible)
+
 class Patient(models.Model):
-    patient_id = models.CharField(max_length=100, unique=True)
-    name = models.CharField(max_length=255)
+    # Core Identity Fields
+    patient_id = models.CharField(max_length=100, unique=True, help_text="Internal patient identifier")
+    
+    # Name Fields (FHIR supports multiple names, but simplified here)
+    given_name = models.CharField(max_length=100, help_text="First name(s)")
+    family_name = models.CharField(max_length=100, help_text="Last name/surname")
+    middle_name = models.CharField(max_length=100, blank=True, null=True, help_text="Middle name(s)")
+    name_prefix = models.CharField(max_length=20, blank=True, null=True, help_text="Dr., Mr., Mrs., etc.")
+    name_suffix = models.CharField(max_length=20, blank=True, null=True, help_text="Jr., Sr., III, etc.")
+    
+    # Legacy name field for backward compatibility
+    name = models.CharField(max_length=255, blank=True, null=True, help_text="Full name (legacy field)")
+    
+    # Core Demographics
     gender = models.CharField(max_length=10, choices=[
-        ("male", "Male"), ("female", "Female"), ("other", "Other")
-    ])
-    birth_date = models.DateField(null=True, blank=True)
-    national_id = models.CharField(max_length=50, unique=True)
-    last_arrived = models.DateField(null=True, blank=True)  # Last visit date
+        ("male", "Male"), 
+        ("female", "Female"), 
+        ("other", "Other"),
+        ("unknown", "Unknown")
+    ], default="unknown")
+    
+    birth_date = models.DateField(null=True, blank=True, help_text="Date of birth")
+    
+    # Identifiers (FHIR supports multiple identifiers)
+    national_id = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="National ID/SSN")
+    medical_record_number = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="MRN")
+    insurance_number = models.CharField(max_length=100, blank=True, null=True, help_text="Insurance ID")
+    
+    # Contact Information
+    phone_validator = RegexValidator(
+        regex=r'^\+?1?\d{9,15}$',
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
+    )
+    primary_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
+    secondary_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    
+    # Address Information
+    address_line1 = models.CharField(max_length=255, blank=True, null=True, help_text="Street address")
+    address_line2 = models.CharField(max_length=255, blank=True, null=True, help_text="Apartment, suite, etc.")
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state_province = models.CharField(max_length=100, blank=True, null=True)
+    postal_code = models.CharField(max_length=20, blank=True, null=True)
+    country = models.CharField(max_length=100, default="Ghana")
+    
+    # Additional Demographics
+    marital_status = models.CharField(max_length=20, choices=[
+        ("single", "Single"),
+        ("married", "Married"),
+        ("divorced", "Divorced"),
+        ("widowed", "Widowed"),
+        ("separated", "Separated"),
+        ("unknown", "Unknown")
+    ], blank=True, null=True)
+    
+    # Language and Communication
+    preferred_language = models.CharField(max_length=10, choices=[
+        ("en", "English"),
+        ("tw", "Twi"),
+        ("ga", "Ga"),
+        ("ee", "Ewe"),
+        ("fr", "French"),
+        ("ha", "Hausa")
+    ], default="en")
+    
+    # Emergency Contact
+    emergency_contact_name = models.CharField(max_length=255, blank=True, null=True)
+    emergency_contact_relationship = models.CharField(max_length=50, blank=True, null=True)
+    emergency_contact_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
+    
+    # Clinical Information
+    blood_type = models.CharField(max_length=5, choices=[
+        ("A+", "A+"), ("A-", "A-"),
+        ("B+", "B+"), ("B-", "B-"),
+        ("AB+", "AB+"), ("AB-", "AB-"),
+        ("O+", "O+"), ("O-", "O-")
+    ], blank=True, null=True)
+    
+    allergies = models.TextField(blank=True, null=True, help_text="Known allergies (comma-separated)")
+    
+    # Status Fields
+    active = models.BooleanField(default=True, help_text="Whether this patient record is active")
+    deceased = models.BooleanField(default=False)
+    deceased_date = models.DateField(blank=True, null=True)
+    
+    # Practice Management
+    last_arrived = models.DateField(null=True, blank=True, help_text="Last visit date")
+    registration_date = models.DateTimeField(default=timezone.now)
+    
+    # FHIR Integration
+    fhir_id = models.CharField(max_length=100, blank=True, null=True, help_text="FHIR server patient ID")
+    last_sync = models.DateTimeField(blank=True, null=True, help_text="Last FHIR sync timestamp")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_patients')
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='updated_patients')
 
+    class Meta:
+        db_table = 'patients'
+        ordering = ['family_name', 'given_name']
+        indexes = [
+            models.Index(fields=['family_name', 'given_name']),
+            models.Index(fields=['birth_date']),
+            models.Index(fields=['national_id']),
+            models.Index(fields=['medical_record_number']),
+            models.Index(fields=['primary_phone']),
+            models.Index(fields=['last_arrived']),
+            models.Index(fields=['active']),
+        ]
 
-
-    def to_json(self):
-        name_parts = self.name.split()
-        family = name_parts[-1] if len(name_parts) > 1 else self.name
-        given = name_parts[:-1] if len(name_parts) > 1 else []
-
-        return {
-        "resourceType": "Patient",
-        "id": self.patient_id,
-        "identifier": [
-            {
+    def __str__(self):
+        return f"{self.full_name} ({self.patient_id})"
+    
+    @property
+    def full_name(self):
+        """Returns the patient's full name"""
+        # Use legacy name field if structured name fields aren't available
+        if not self.given_name and not self.family_name and self.name:
+            return self.name
+            
+        name_parts = []
+        if self.name_prefix:
+            name_parts.append(self.name_prefix)
+        if self.given_name:
+            name_parts.append(self.given_name)
+        if self.middle_name:
+            name_parts.append(self.middle_name)
+        if self.family_name:
+            name_parts.append(self.family_name)
+        if self.name_suffix:
+            name_parts.append(self.name_suffix)
+        return " ".join(name_parts)
+    
+    @property
+    def age(self):
+        """Calculate patient age from birth_date"""
+        if not self.birth_date:
+            return None
+        today = timezone.now().date()
+        return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+    
+    @property
+    def full_address(self):
+        """Returns formatted full address"""
+        address_parts = []
+        if self.address_line1:
+            address_parts.append(self.address_line1)
+        if self.address_line2:
+            address_parts.append(self.address_line2)
+        if self.city:
+            address_parts.append(self.city)
+        if self.state_province:
+            address_parts.append(self.state_province)
+        if self.postal_code:
+            address_parts.append(self.postal_code)
+        if self.country:
+            address_parts.append(self.country)
+        return ", ".join(address_parts)
+    
+    def get_primary_identifier(self):
+        """Returns the primary identifier for FHIR integration"""
+        return self.medical_record_number or self.national_id or self.patient_id
+    
+    def to_fhir_dict(self):
+        """Convert patient data to FHIR-compatible dictionary structure (comprehensive)"""
+        fhir_data = {
+            "resourceType": "Patient",
+            "id": self.patient_id,
+            "identifier": [
+                {
+                    "use": "usual",
+                    "type": {
+                        "coding": [{"system": "http://terminology.hl7.org/CodeSystem/v2-0203", "code": "MR"}]
+                    },
+                    "value": self.get_primary_identifier()
+                }
+            ],
+            "active": self.active,
+        }
+        
+        # Add name information
+        if self.given_name and self.family_name:
+            fhir_data["name"] = [
+                {
+                    "use": "official",
+                    "family": self.family_name,
+                    "given": [self.given_name] + ([self.middle_name] if self.middle_name else []),
+                    "prefix": [self.name_prefix] if self.name_prefix else [],
+                    "suffix": [self.name_suffix] if self.name_suffix else []
+                }
+            ]
+        elif self.name:
+            # Handle legacy name field
+            name_parts = self.name.split()
+            family = name_parts[-1] if len(name_parts) > 1 else self.name
+            given = name_parts[:-1] if len(name_parts) > 1 else []
+            fhir_data["name"] = [
+                {
+                    "use": "official",
+                    "family": family,
+                    "given": given
+                }
+            ]
+        
+        # Add gender
+        if self.gender and self.gender != "unknown":
+            fhir_data["gender"] = self.gender
+        
+        # Add national ID as additional identifier
+        if self.national_id:
+            national_id_identifier = {
                 "use": "official",
                 "type": {
                     "text": "National ID"
@@ -33,26 +227,95 @@ class Patient(models.Model):
                 "value": self.national_id,
                 "system": "http://example.org/national-id"
             }
-        ],
-        "name": [
-            {
-                "use": "official",
-                "family": family,
-                "given": given
+            if "identifier" not in fhir_data:
+                fhir_data["identifier"] = []
+            fhir_data["identifier"].append(national_id_identifier)
+        
+        # Add birth date if available
+        if self.birth_date:
+            fhir_data["birthDate"] = self.birth_date.isoformat()
+            
+        # Add telecom information
+        telecom = []
+        if self.primary_phone:
+            telecom.append({"system": "phone", "value": self.primary_phone, "use": "home"})
+        if self.secondary_phone:
+            telecom.append({"system": "phone", "value": self.secondary_phone, "use": "work"})
+        if self.email:
+            telecom.append({"system": "email", "value": self.email})
+        if telecom:
+            fhir_data["telecom"] = telecom
+            
+        # Add address information
+        if any([self.address_line1, self.city, self.state_province, self.postal_code]):
+            address_data = {
+                "use": "home",
+                "type": "physical"
             }
-        ],
-        "gender": self.gender,
-        "birthDate": self.birth_date.isoformat() if self.birth_date else None,
-        "extension": [
+            if self.address_line1 or self.address_line2:
+                lines = [line for line in [self.address_line1, self.address_line2] if line]
+                address_data["line"] = lines
+            if self.city:
+                address_data["city"] = self.city
+            if self.state_province:
+                address_data["state"] = self.state_province
+            if self.postal_code:
+                address_data["postalCode"] = self.postal_code
+            if self.country:
+                address_data["country"] = self.country
+                
+            fhir_data["address"] = [address_data]
+        
+        # Add marital status
+        if self.marital_status and self.marital_status != "unknown":
+            fhir_data["maritalStatus"] = {
+                "coding": [{"system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "code": self.marital_status}]
+            }
+            
+        # Add deceased information
+        if self.deceased:
+            if self.deceased_date:
+                fhir_data["deceasedDateTime"] = self.deceased_date.isoformat()
+            else:
+                fhir_data["deceasedBoolean"] = True
+        
+        # Add last arrived as extension
+        fhir_data["extension"] = [
             {
                 "url": "http://example.org/fhir/StructureDefinition/last-arrived",
                 "valueDate": self.last_arrived.isoformat() if self.last_arrived else date.today().isoformat()
             }
         ]
-    }
-
-    def __str__(self):
-        return f"{self.name} ({self.patient_id})"
+                
+        return fhir_data
+    
+    def to_json(self):
+        """Legacy method for backward compatibility - delegates to to_fhir_dict"""
+        return self.to_fhir_dict()
+    
+    def save(self, *args, **kwargs):
+        """Override save to generate patient_id and handle legacy name field"""
+        if not self.patient_id:
+            # Generate a unique patient ID
+            self.patient_id = f"PAT-{str(uuid.uuid4())[:8].upper()}"
+        
+        # If legacy name field is provided but structured fields aren't, populate them
+        if self.name and not self.given_name and not self.family_name:
+            name_parts = self.name.strip().split()
+            if len(name_parts) >= 2:
+                self.given_name = name_parts[0]
+                self.family_name = name_parts[-1]
+                if len(name_parts) > 2:
+                    self.middle_name = " ".join(name_parts[1:-1])
+            elif len(name_parts) == 1:
+                self.given_name = name_parts[0]
+                self.family_name = name_parts[0]  # Use same for both if only one name
+        
+        # Ensure legacy name field is populated from structured fields
+        if not self.name and (self.given_name or self.family_name):
+            self.name = self.full_name
+        
+        super().save(*args, **kwargs)
 
 
 class FHIRSyncTask(models.Model):
@@ -65,7 +328,15 @@ class FHIRSyncTask(models.Model):
     ], default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
     synced_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True, null=True, help_text="Error details if sync failed")
+    retry_count = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['resource_type', 'status']),
+            models.Index(fields=['created_at']),
+        ]
 
     def __str__(self):
         return f"{self.resource_type} - {self.resource_id} ({self.status})"
-

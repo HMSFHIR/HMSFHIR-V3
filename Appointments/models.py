@@ -1,6 +1,6 @@
 from django.db import models
 from Patients.models import Patient
-from Patients.models import Practitioner  # Import the Practitioner model if it's in a separate app
+from Practitioner.models import Practitioner  # Import the Practitioner model if it's in a separate app
 
 class Appointment(models.Model):
     appointment_id = models.AutoField(primary_key=True)
