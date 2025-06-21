@@ -7,4 +7,4 @@ db.sqlite3
 # Celery beat schedule files
 celerybeat-schedule*
 
-/venv/
+/venv/celerybeat-schedule*
