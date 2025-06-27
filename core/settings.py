@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     'MedicalRecords.apps.MedicalrecordsConfig',
     'celery',
     'autht',
+    'Bridge',
 ]
 
 """
