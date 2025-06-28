@@ -4,21 +4,22 @@ from django.utils import timezone
 from django.conf import settings
 from datetime import date
 import uuid
+from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField, EncryptedEmailField
 
 
 class Patient(models.Model):
     # Core Identity Fields
     patient_id = models.CharField(max_length=100, unique=True, help_text="Internal patient identifier")
     
-    # Name Fields (FHIR supports multiple names, but simplified here)
-    given_name = models.CharField(max_length=100, help_text="First name(s)")
-    family_name = models.CharField(max_length=100, help_text="Last name/surname")
-    middle_name = models.CharField(max_length=100, blank=True, null=True, help_text="Middle name(s)")
-    name_prefix = models.CharField(max_length=20, blank=True, null=True, help_text="Dr., Mr., Mrs., etc.")
-    name_suffix = models.CharField(max_length=20, blank=True, null=True, help_text="Jr., Sr., III, etc.")
+    # Name Fields (FHIR supports multiple names, but simplified here) - ENCRYPTED
+    given_name = EncryptedCharField(max_length=500, help_text="First name(s)")
+    family_name = EncryptedCharField(max_length=500, help_text="Last name/surname")
+    middle_name = EncryptedCharField(max_length=500, blank=True, null=True, help_text="Middle name(s)")
+    name_prefix = EncryptedCharField(max_length=200, blank=True, null=True, help_text="Dr., Mr., Mrs., etc.")
+    name_suffix = EncryptedCharField(max_length=200, blank=True, null=True, help_text="Jr., Sr., III, etc.")
     
-    # Legacy name field for backward compatibility
-    name = models.CharField(max_length=255, blank=True, null=True, help_text="Full name (legacy field)")
+    # Legacy name field for backward compatibility - ENCRYPTED
+    name = EncryptedCharField(max_length=1000, blank=True, null=True, help_text="Full name (legacy field)")
     
     # Core Demographics
     gender = models.CharField(max_length=10, choices=[
@@ -28,29 +29,30 @@ class Patient(models.Model):
         ("unknown", "Unknown")
     ], default="unknown")
     
+    # CHANGED: Removed encryption from date field to prevent database type conflicts
     birth_date = models.DateField(null=True, blank=True, help_text="Date of birth")
     
-    # Identifiers (FHIR supports multiple identifiers)
-    national_id = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="National ID/SSN")
-    medical_record_number = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="MRN")
-    insurance_number = models.CharField(max_length=100, blank=True, null=True, help_text="Insurance ID")
+    # Identifiers (FHIR supports multiple identifiers) - ENCRYPTED
+    national_id = EncryptedCharField(max_length=300, unique=True, null=True, blank=True, help_text="National ID/SSN")
+    medical_record_number = EncryptedCharField(max_length=300, unique=True, null=True, blank=True, help_text="MRN")
+    insurance_number = EncryptedCharField(max_length=500, blank=True, null=True, help_text="Insurance ID")
     
-    # Contact Information
+    # Contact Information - ENCRYPTED
     phone_validator = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
     )
-    primary_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
-    secondary_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
+    primary_phone = EncryptedCharField(validators=[phone_validator], max_length=200, blank=True, null=True)
+    secondary_phone = EncryptedCharField(validators=[phone_validator], max_length=200, blank=True, null=True)
+    email = EncryptedEmailField(max_length=400, blank=True, null=True)
     
-    # Address Information
-    address_line1 = models.CharField(max_length=255, blank=True, null=True, help_text="Street address")
-    address_line2 = models.CharField(max_length=255, blank=True, null=True, help_text="Apartment, suite, etc.")
-    city = models.CharField(max_length=100, blank=True, null=True)
-    state_province = models.CharField(max_length=100, blank=True, null=True)
-    postal_code = models.CharField(max_length=20, blank=True, null=True)
-    country = models.CharField(max_length=100, default="Ghana")
+    # Address Information - ENCRYPTED
+    address_line1 = EncryptedCharField(max_length=1000, blank=True, null=True, help_text="Street address")
+    address_line2 = EncryptedCharField(max_length=1000, blank=True, null=True, help_text="Apartment, suite, etc.")
+    city = EncryptedCharField(max_length=500, blank=True, null=True)
+    state_province = EncryptedCharField(max_length=500, blank=True, null=True)
+    postal_code = EncryptedCharField(max_length=200, blank=True, null=True)
+    country = models.CharField(max_length=100, default="Ghana")  # Country can remain unencrypted for analytics
     
     # Additional Demographics
     marital_status = models.CharField(max_length=20, choices=[
@@ -72,28 +74,29 @@ class Patient(models.Model):
         ("ha", "Hausa")
     ], default="en")
     
-    # Emergency Contact
-    emergency_contact_name = models.CharField(max_length=255, blank=True, null=True)
-    emergency_contact_relationship = models.CharField(max_length=50, blank=True, null=True)
-    emergency_contact_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
+    # Emergency Contact - ENCRYPTED
+    emergency_contact_name = EncryptedCharField(max_length=1000, blank=True, null=True)
+    emergency_contact_relationship = EncryptedCharField(max_length=300, blank=True, null=True)
+    emergency_contact_phone = EncryptedCharField(validators=[phone_validator], max_length=200, blank=True, null=True)
     
-    # Clinical Information
-    blood_type = models.CharField(max_length=5, choices=[
+    # Clinical Information - ENCRYPTED
+    blood_type = EncryptedCharField(max_length=200, choices=[
         ("A+", "A+"), ("A-", "A-"),
         ("B+", "B+"), ("B-", "B-"),
         ("AB+", "AB+"), ("AB-", "AB-"),
         ("O+", "O+"), ("O-", "O-")
     ], blank=True, null=True)
     
-    allergies = models.TextField(blank=True, null=True, help_text="Known allergies (comma-separated)")
+    allergies = EncryptedTextField(blank=True, null=True, help_text="Known allergies (comma-separated)")
     
     # Status Fields
     active = models.BooleanField(default=True, help_text="Whether this patient record is active")
     deceased = models.BooleanField(default=False)
+    # CHANGED: Removed encryption from date field to prevent database type conflicts
     deceased_date = models.DateField(blank=True, null=True)
     
     # Practice Management
-    last_arrived = models.DateField(null=True, blank=True, help_text="Last visit date")
+    last_arrived = models.DateField(null=True, blank=True, help_text="Last visit date")  # Can remain unencrypted for scheduling analytics
     registration_date = models.DateTimeField(default=timezone.now)
     
     # FHIR Integration
@@ -110,13 +113,11 @@ class Patient(models.Model):
         db_table = 'patients'
         ordering = ['family_name', 'given_name']
         indexes = [
-            models.Index(fields=['family_name', 'given_name']),
+            # Date fields can now be indexed since they're not encrypted
             models.Index(fields=['birth_date']),
-            models.Index(fields=['national_id']),
-            models.Index(fields=['medical_record_number']),
-            models.Index(fields=['primary_phone']),
             models.Index(fields=['last_arrived']),
             models.Index(fields=['active']),
+            models.Index(fields=['patient_id']),
         ]
 
     def __str__(self):
