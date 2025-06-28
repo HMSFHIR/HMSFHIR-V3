@@ -1,4 +1,6 @@
+{% extends "autht/main.html" %}
 {% block content %}
+
 <div class="dashboard-header">
     <h1 class="dashboard-title">
         <i class="fas fa-users"></i>
@@ -118,51 +120,418 @@
         </div>
     </div>
     
-    <!-- Pull Form Section (Alternative to Modal) -->
-    <div class="pull-form-section" id="pullFormSection">
-        <div class="pull-form-header">
-            <h4 class="pull-form-title">Pull Patient Data from HAPI FHIR Server</h4>
-            <p class="pull-form-subtitle">Enter Patient ID or National ID to retrieve patient records</p>
-        </div>
-        
-        <form class="pull-form" id="pullDataForm">
-            <div class="form-group">
-                <label class="form-label" for="patientId">Patient ID</label>
-                <input 
-                    type="text" 
-                    id="patientId" 
-                    name="patientId" 
-                    class="form-input" 
-                    placeholder="Enter FHIR Patient ID (e.g., 12345)"
-                >
-                <div class="form-help">The unique identifier for the patient in the FHIR server</div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="nationalId">National ID Number</label>
-                <input 
-                    type="text" 
-                    id="nationalId" 
-                    name="nationalId" 
-                    class="form-input" 
-                    placeholder="Enter National ID (e.g., 1234567890)"
-                >
-                <div class="form-help">The patient's national identification number</div>
-            </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="cancelPullForm()">
-                    <i class="fas fa-times"></i>
-                    Cancel
-                </button>
-                <button type="submit" class="btn btn-info" id="pullSubmitBtn">
-                    <i class="fas fa-download"></i>
-                    Pull Patient Data
-                </button>
-            </div>
-        </form>
-    </div>
+
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--medium-gray);
+    }
+
+    .dashboard-title {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #1F2937;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .dashboard-title i {
+        color: var(--primary-color);
+        font-size: 1.5rem;
+    }
+
+    .dashboard-actions {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #3730A3;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-outline {
+        background-color: white;
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+    }
+
+    .btn-outline:hover {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .btn-success {
+        background-color: var(--success-color);
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #059669;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-info {
+        background-color: var(--info-color);
+        color: white;
+    }
+
+    .btn-info:hover {
+        background-color: #0284C7;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--medium-gray);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+    }
+
+    .stat-icon.primary { background-color: var(--primary-color); }
+    .stat-icon.success { background-color: var(--success-color); }
+    .stat-icon.warning { background-color: var(--warning-color); }
+    .stat-icon.info { background-color: var(--info-color); }
+
+    .stat-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+    }
+
+    .stat-trend.up {
+        background-color: #DCFCE7;
+        color: var(--success-color);
+    }
+
+    .stat-trend.down {
+        background-color: #FEF2F2;
+        color: var(--danger-color);
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1F2937;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--dark-gray);
+        font-weight: 500;
+    }
+
+    /* FHIR Actions Section */
+    .fhir-actions {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--medium-gray);
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .fhir-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--medium-gray);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .fhir-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .fhir-title i {
+        font-size: 1.5rem;
+    }
+
+    .fhir-subtitle {
+        font-size: 0.875rem;
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+    }
+
+    .fhir-content {
+        padding: 2rem;
+    }
+
+    .fhir-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .fhir-button {
+        background: white;
+        border: 2px solid var(--medium-gray);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        text-decoration: none;
+        color: #1F2937;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .fhir-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .fhir-button:hover::before {
+        left: 100%;
+    }
+
+    .fhir-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .fhir-button.pull {
+        border-color: var(--info-color);
+    }
+
+    .fhir-button.pull:hover {
+        border-color: var(--info-color);
+        background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%);
+        color: var(--info-color);
+    }
+
+    .fhir-button.sync {
+        border-color: var(--success-color);
+    }
+
+    .fhir-button.sync:hover {
+        border-color: var(--success-color);
+        background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+        color: var(--success-color);
+    }
+
+    .fhir-button-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: block;
+    }
+
+    .fhir-button.pull .fhir-button-icon {
+        color: var(--info-color);
+    }
+
+    .fhir-button.sync .fhir-button-icon {
+        color: var(--success-color);
+    }
+
+    .fhir-button-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+
+    .fhir-button-description {
+        font-size: 0.875rem;
+        color: var(--dark-gray);
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+    }
+
+    .fhir-button-action {
+        background-color: transparent;
+        border: 2px solid currentColor;
+        border-radius: 6px;
+        padding: 0.75rem 1.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: inherit;
+        transition: all 0.2s ease;
+    }
+
+    .fhir-button:hover .fhir-button-action {
+        background-color: currentColor;
+        color: white;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .quick-action {
+        background: white;
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        text-decoration: none;
+        color: #1F2937;
+        transition: all 0.2s ease;
+    }
+
+    .quick-action:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        color: var(--primary-color);
+    }
+
+    .quick-action i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        color: var(--primary-color);
+    }
+
+    .quick-action-text {
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    /* Loading States */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+        position: relative;
+    }
+
+    .loading::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .dashboard-actions {
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .quick-actions {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .fhir-buttons {
+            grid-template-columns: 1fr;
+        }
+
+        .fhir-content {
+            padding: 1.5rem;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
