@@ -106,7 +106,7 @@ CKEDITOR_5_CONFIGS = {
 """
 
 # FHIR SERVER BASE URL
-FHIR_SERVER_BASE_URL = "http://localhost:8080/fhir"
+FHIR_SERVER_BASE_URL = "http://172.17.0.1:8080/fhir"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

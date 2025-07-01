@@ -124,6 +124,7 @@
 </div>
 {% endblock %}
 
+
 {% block extra_css %}
 <style>
     .dashboard-header {
@@ -763,34 +764,40 @@
         pullBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pulling...';
         pullBtn.disabled = true;
         
-        // Make API call
-        const formData = {
-            patient_id: patientId,
-            national_id: nationalId
-        };
+        // Build search parameters for FHIR query
+        const searchParams = new URLSearchParams();
+        if (patientId) {
+            searchParams.append('_id', patientId);
+        }
+        if (nationalId) {
+            searchParams.append('identifier', nationalId);
+        }
         
-        fetch('/api/fhir/pull-patient/', {
-            method: 'POST',
+        // Make direct API call to FHIR server
+        fetch(`${FHIR_SERVER_URL}/Patient?${searchParams.toString()}`, {
+            method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(formData)
+                'Accept': 'application/fhir+json',
+                'Content-Type': 'application/fhir+json'
+            }
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                showNotification(`Patient data pulled successfully! Found: ${data.patient_name || 'Patient'}`, 'success');
+            if (data.resourceType === 'Bundle' && data.entry && data.entry.length > 0) {
+                const patient = data.entry[0].resource;
+                const patientName = patient.name ? `${patient.name[0].given[0]} ${patient.name[0].family}` : 'Patient';
+                
+                showNotification(`Patient data pulled successfully! Found: ${patientName}`, 'success');
                 closeQuickSearchModal();
                 
                 // Optionally redirect or refresh
-                if (data.patient_id) {
+                if (patient.id) {
                     setTimeout(() => {
                         location.reload();
                     }, 1500);
                 }
             } else {
-                showNotification(`Failed to pull patient data: ${data.message || 'Unknown error'}`, 'error');
+                showNotification('No patient found with the provided identifiers', 'error');
             }
         })
         .catch(error => {
@@ -832,39 +839,44 @@
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pulling...';
         submitBtn.disabled = true;
         
-        // Prepare data
-        const formData = {
-            patient_id: patientId,
-            national_id: nationalId
-        };
+        // Build search parameters for FHIR query
+        const searchParams = new URLSearchParams();
+        if (patientId) {
+            searchParams.append('_id', patientId);
+        }
+        if (nationalId) {
+            searchParams.append('identifier', nationalId);
+        }
         
-        // Make API call to pull specific patient data
-        fetch('/api/fhir/pull-patient/', {
-            method: 'POST',
+        // Make direct API call to FHIR server
+        fetch(`${FHIR_SERVER_URL}/Patient?${searchParams.toString()}`, {
+            method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(formData)
+                'Accept': 'application/fhir+json',
+                'Content-Type': 'application/fhir+json'
+            }
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                showNotification(`Patient data pulled successfully! Found: ${data.patient_name || 'Patient'}`, 'success');
+            if (data.resourceType === 'Bundle' && data.entry && data.entry.length > 0) {
+                const patient = data.entry[0].resource;
+                const patientName = patient.name ? `${patient.name[0].given[0]} ${patient.name[0].family}` : 'Patient';
+                
+                showNotification(`Patient data pulled successfully! Found: ${patientName}`, 'success');
                 
                 // Close form and reset
                 cancelPullForm();
                 
                 // Optionally refresh stats or redirect to patient details
-                if (data.patient_id) {
+                if (patient.id) {
                     setTimeout(() => {
                         // You can redirect to patient details page or refresh the dashboard
-                        // window.location.href = `/patients/${data.patient_id}/`;
+                        // window.location.href = `/patients/${patient.id}/`;
                         location.reload();
                     }, 2000);
                 }
             } else {
-                showNotification(`Failed to pull patient data: ${data.message || 'Unknown error'}`, 'error');
+                showNotification('No patient found with the provided identifiers', 'error');
             }
         })
         .catch(error => {
@@ -887,22 +899,23 @@
         actionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
         actionBtn.disabled = true;
         
-        // Simulate API call - replace with actual sync endpoint
-        fetch('/api/fhir/sync-patients/', {
-            method: 'POST',
+        // Make direct API call to FHIR server to get all patients
+        fetch(`${FHIR_SERVER_URL}/Patient`, {
+            method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'Accept': 'application/fhir+json',
+                'Content-Type': 'application/fhir+json'
             }
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                showNotification('Patient data synchronized successfully!', 'success');
+            if (data.resourceType === 'Bundle') {
+                const patientCount = data.entry ? data.entry.length : 0;
+                showNotification(`Patient data synchronized successfully! Found ${patientCount} patients.`, 'success');
                 // Optionally refresh stats
                 location.reload();
             } else {
-                showNotification('Failed to sync patient data: ' + data.message, 'error');
+                showNotification('Failed to sync patient data: Invalid response format', 'error');
             }
         })
         .catch(error => {
@@ -945,10 +958,13 @@
             border-radius: 8px;
             color: white;
             font-weight: 600;
-            z-index: 1000;
+            z-index: 999999;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             transform: translateX(400px);
             transition: transform 0.3s ease;
+            pointer-events: auto;
+            max-width: 300px;
+            word-wrap: break-word;
         `;
         
         if (type === 'success') {
