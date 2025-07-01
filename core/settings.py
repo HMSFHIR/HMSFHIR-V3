@@ -19,7 +19,7 @@ load_dotenv()
 FIELD_ENCRYPTION_KEY = os.environ.get('DJANGO_CRYPTOGRAPHY_KEY')
 
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths inside the project like this: BASE_DIR / 'subdir'.f
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -89,9 +89,10 @@ INSTALLED_APPS = [
     'celery',
     'autht',
     'django_cryptography',
+    'Bridge',
 ]
 
-"""
+"""'
 CKEDITOR_5_CONFIGS = {
     'default': {
         'toolbar': [
@@ -105,7 +106,7 @@ CKEDITOR_5_CONFIGS = {
 """
 
 # FHIR SERVER BASE URL
-FHIR_SERVER_BASE_URL = "http://localhost:8080/fhir"
+FHIR_SERVER_BASE_URL = "http://172.17.0.1:8080/fhir"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

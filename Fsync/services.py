@@ -13,6 +13,11 @@ from django.contrib.contenttypes.models import ContentType
 import re
 from datetime import datetime
 
+from core.settings import FHIR_SERVER_BASE_URL
+
+
+#  Declaring base url. Pointing from settings.py 
+base_url = FHIR_SERVER_BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -197,19 +202,31 @@ class FHIRSyncService:
     """Core service for FHIR synchronization"""
     
     def __init__(self, config_name: str = 'default'):
-        self.config = FHIRSyncConfig.objects.get(name=config_name, is_active=True)
+        try:
+            self.config = FHIRSyncConfig.objects.get(name=config_name, is_active=True)
+            # Use database config if available, otherwise fall back to settings
+            self.base_url = self.config.base_url or settings.FHIR_SERVER_BASE_URL
+        except FHIRSyncConfig.DoesNotExist:
+            # If no database config, use settings
+            self.base_url = settings.FHIR_SERVER_BASE_URL
+            self.config = None
+        
+        # Validate base_url is configured
+        if not self.base_url:
+            raise ValueError("FHIR server URL not configured in settings or database")
+            
         self.session = requests.Session()
         self._setup_authentication()
-    
+
     def _setup_authentication(self):
         """Setup authentication for FHIR requests"""
-        if self.config.auth_type == 'basic':
+        if self.config and self.config.auth_type == 'basic':
             username = self.config.auth_credentials.get('username')
             password = self.config.auth_credentials.get('password')
             if username and password:
                 self.session.auth = (username, password)
         
-        elif self.config.auth_type == 'bearer':
+        elif self.config and self.config.auth_type == 'bearer':
             token = self.config.auth_credentials.get('token')
             if token:
                 self.session.headers.update({'Authorization': f'Bearer {token}'})
@@ -224,8 +241,8 @@ class FHIRSyncService:
         """Test connection to FHIR server"""
         try:
             response = self.session.get(
-                f"{self.config.base_url}/metadata",
-                timeout=self.config.timeout
+                f"{self.base_url}/metadata",
+                timeout=getattr(self.config, 'timeout', 30)
             )
             
             if response.status_code == 200:
@@ -373,9 +390,13 @@ class FHIRSyncService:
     
     def _create_resource(self, queue_item: SyncQueue, fhir_data: Dict) -> bool:
         """Create new FHIR resource"""
-        url = f"{self.config.base_url}/{queue_item.resource_type}"
+        url = f"{self.base_url}/{queue_item.resource_type}"
         
-        response = self.session.post(url, json=fhir_data, timeout=self.config.timeout)
+        response = self.session.post(
+            url, 
+            json=fhir_data, 
+            timeout=getattr(self.config, 'timeout', 30)
+        )
         
         if response.status_code in [200, 201]:
             response_data = response.json()
@@ -401,9 +422,13 @@ class FHIRSyncService:
             # Try to create instead
             return self._create_resource(queue_item, fhir_data)
         
-        url = f"{self.config.base_url}/{queue_item.resource_type}/{fhir_id}"
+        url = f"{self.base_url}/{queue_item.resource_type}/{fhir_id}"
         
-        response = self.session.put(url, json=fhir_data, timeout=self.config.timeout)
+        response = self.session.put(
+            url, 
+            json=fhir_data, 
+            timeout=getattr(self.config, 'timeout', 30)
+        )
         
         if response.status_code in [200, 201]:
             response_data = response.json()
@@ -431,9 +456,12 @@ class FHIRSyncService:
             queue_item.mark_failed("No FHIR ID available for deletion")
             return False
         
-        url = f"{self.config.base_url}/{queue_item.resource_type}/{fhir_id}"
+        url = f"{self.base_url}/{queue_item.resource_type}/{fhir_id}"
         
-        response = self.session.delete(url, timeout=self.config.timeout)
+        response = self.session.delete(
+            url, 
+            timeout=getattr(self.config, 'timeout', 30)
+        )
         
         if response.status_code in [200, 204]:
             queue_item.mark_success()
@@ -477,6 +505,50 @@ class FHIRSyncService:
             message=message,
             details=details or {}
         )
+
+    def check_server_availability(self) -> bool:
+        """
+        Check if the FHIR server is available and responding.
+        Returns True if available, False otherwise.
+        """
+        try:
+            if not self.base_url:
+                logger.error("FHIR server URL not configured")
+                return False
+
+            # Try to access the metadata endpoint (standard FHIR capability statement)
+            metadata_url = f"{self.base_url.rstrip('/')}/metadata"
+            response = self.session.get(
+                metadata_url,
+                timeout=10,
+                headers={'Accept': 'application/fhir+json'}
+            )
+
+            # Check if we got a successful response
+            if response.status_code == 200:
+                # Optionally validate that it's actually a FHIR capability statement
+                try:
+                    data = response.json()
+                    return data.get('resourceType') == 'CapabilityStatement'
+                except Exception:
+                    # If JSON parsing fails, just check status code
+                    return True
+
+            return False
+
+        except requests.exceptions.ConnectionError:
+            logger.warning("FHIR server connection failed - server may be down")
+            return False
+        except requests.exceptions.Timeout:
+            logger.warning("FHIR server connection timeout")
+            return False
+        except requests.exceptions.RequestException as e:
+            logger.error(f"FHIR server availability check failed: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error checking FHIR server availability: {e}")
+            return False
+    
 
 class SyncQueueManager:
     """Manager for sync queue operations"""

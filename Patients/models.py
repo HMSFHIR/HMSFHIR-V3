@@ -123,25 +123,46 @@ class Patient(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.patient_id})"
     
+    # Helper method to safely get encrypted field values
+    def get_encrypted_field(self, field_name):
+        """Safely retrieve encrypted field value, handling None cases"""
+        try:
+            value = getattr(self, field_name)
+            # Handle encrypted fields that might return None or empty strings
+            if value is None or (isinstance(value, str) and value.strip() == ''):
+                return None
+            return value
+        except (AttributeError, Exception):
+            return None
+    
     @property
     def full_name(self):
         """Returns the patient's full name"""
         # Use legacy name field if structured name fields aren't available
-        if not self.given_name and not self.family_name and self.name:
-            return self.name
+        legacy_name = self.get_encrypted_field('name')
+        given_name = self.get_encrypted_field('given_name')
+        family_name = self.get_encrypted_field('family_name')
+        
+        if not given_name and not family_name and legacy_name:
+            return legacy_name
             
         name_parts = []
-        if self.name_prefix:
-            name_parts.append(self.name_prefix)
-        if self.given_name:
-            name_parts.append(self.given_name)
-        if self.middle_name:
-            name_parts.append(self.middle_name)
-        if self.family_name:
-            name_parts.append(self.family_name)
-        if self.name_suffix:
-            name_parts.append(self.name_suffix)
-        return " ".join(name_parts)
+        name_prefix = self.get_encrypted_field('name_prefix')
+        middle_name = self.get_encrypted_field('middle_name')
+        name_suffix = self.get_encrypted_field('name_suffix')
+        
+        if name_prefix:
+            name_parts.append(name_prefix)
+        if given_name:
+            name_parts.append(given_name)
+        if middle_name:
+            name_parts.append(middle_name)
+        if family_name:
+            name_parts.append(family_name)
+        if name_suffix:
+            name_parts.append(name_suffix)
+        
+        return " ".join(name_parts) if name_parts else "Unknown Patient"
     
     @property
     def age(self):
@@ -155,23 +176,34 @@ class Patient(models.Model):
     def full_address(self):
         """Returns formatted full address"""
         address_parts = []
-        if self.address_line1:
-            address_parts.append(self.address_line1)
-        if self.address_line2:
-            address_parts.append(self.address_line2)
-        if self.city:
-            address_parts.append(self.city)
-        if self.state_province:
-            address_parts.append(self.state_province)
-        if self.postal_code:
-            address_parts.append(self.postal_code)
+        
+        address_line1 = self.get_encrypted_field('address_line1')
+        address_line2 = self.get_encrypted_field('address_line2')
+        city = self.get_encrypted_field('city')
+        state_province = self.get_encrypted_field('state_province')
+        postal_code = self.get_encrypted_field('postal_code')
+        
+        if address_line1:
+            address_parts.append(address_line1)
+        if address_line2:
+            address_parts.append(address_line2)
+        if city:
+            address_parts.append(city)
+        if state_province:
+            address_parts.append(state_province)
+        if postal_code:
+            address_parts.append(postal_code)
         if self.country:
             address_parts.append(self.country)
+            
         return ", ".join(address_parts)
     
     def get_primary_identifier(self):
         """Returns the primary identifier for FHIR integration"""
-        return self.medical_record_number or self.national_id or self.patient_id
+        mrn = self.get_encrypted_field('medical_record_number')
+        national_id = self.get_encrypted_field('national_id')
+        
+        return mrn or national_id or self.patient_id
     
     def to_fhir_dict(self):
         """Convert patient data to FHIR-compatible dictionary structure (comprehensive)"""
@@ -190,22 +222,40 @@ class Patient(models.Model):
             "active": self.active,
         }
         
-        # Add name information
-        if self.given_name and self.family_name:
-            fhir_data["name"] = [
-                {
-                    "use": "official",
-                    "family": self.family_name,
-                    "given": [self.given_name] + ([self.middle_name] if self.middle_name else []),
-                    "prefix": [self.name_prefix] if self.name_prefix else [],
-                    "suffix": [self.name_suffix] if self.name_suffix else []
-                }
-            ]
-        elif self.name:
+        # Add name information - handle encrypted fields safely
+        given_name = self.get_encrypted_field('given_name')
+        family_name = self.get_encrypted_field('family_name')
+        middle_name = self.get_encrypted_field('middle_name')
+        name_prefix = self.get_encrypted_field('name_prefix')
+        name_suffix = self.get_encrypted_field('name_suffix')
+        legacy_name = self.get_encrypted_field('name')
+        
+        if given_name and family_name:
+            name_data = {
+                "use": "official",
+                "family": family_name,
+                "given": [given_name]
+            }
+            
+            if middle_name:
+                name_data["given"].append(middle_name)
+            if name_prefix:
+                name_data["prefix"] = [name_prefix]
+            if name_suffix:
+                name_data["suffix"] = [name_suffix]
+                
+            fhir_data["name"] = [name_data]
+            
+        elif legacy_name:
             # Handle legacy name field
-            name_parts = self.name.split()
-            family = name_parts[-1] if len(name_parts) > 1 else self.name
-            given = name_parts[:-1] if len(name_parts) > 1 else []
+            name_parts = legacy_name.split()
+            if len(name_parts) > 1:
+                family = name_parts[-1]
+                given = name_parts[:-1]
+            else:
+                family = legacy_name
+                given = [legacy_name]
+                
             fhir_data["name"] = [
                 {
                     "use": "official",
@@ -219,13 +269,14 @@ class Patient(models.Model):
             fhir_data["gender"] = self.gender
         
         # Add national ID as additional identifier
-        if self.national_id:
+        national_id = self.get_encrypted_field('national_id')
+        if national_id:
             national_id_identifier = {
                 "use": "official",
                 "type": {
                     "text": "National ID"
                 },
-                "value": self.national_id,
+                "value": national_id,
                 "system": "http://example.org/national-id"
             }
             if "identifier" not in fhir_data:
@@ -236,32 +287,46 @@ class Patient(models.Model):
         if self.birth_date:
             fhir_data["birthDate"] = self.birth_date.isoformat()
             
-        # Add telecom information
+        # Add telecom information - handle encrypted fields safely
         telecom = []
-        if self.primary_phone:
-            telecom.append({"system": "phone", "value": self.primary_phone, "use": "home"})
-        if self.secondary_phone:
-            telecom.append({"system": "phone", "value": self.secondary_phone, "use": "work"})
-        if self.email:
-            telecom.append({"system": "email", "value": self.email})
+        primary_phone = self.get_encrypted_field('primary_phone')
+        secondary_phone = self.get_encrypted_field('secondary_phone')
+        email = self.get_encrypted_field('email')
+        
+        if primary_phone:
+            telecom.append({"system": "phone", "value": primary_phone, "use": "home"})
+        if secondary_phone:
+            telecom.append({"system": "phone", "value": secondary_phone, "use": "work"})
+        if email:
+            telecom.append({"system": "email", "value": email})
+            
         if telecom:
             fhir_data["telecom"] = telecom
             
-        # Add address information
-        if any([self.address_line1, self.city, self.state_province, self.postal_code]):
+        # Add address information - handle encrypted fields safely
+        address_line1 = self.get_encrypted_field('address_line1')
+        address_line2 = self.get_encrypted_field('address_line2')
+        city = self.get_encrypted_field('city')
+        state_province = self.get_encrypted_field('state_province')
+        postal_code = self.get_encrypted_field('postal_code')
+        
+        if any([address_line1, city, state_province, postal_code]):
             address_data = {
                 "use": "home",
                 "type": "physical"
             }
-            if self.address_line1 or self.address_line2:
-                lines = [line for line in [self.address_line1, self.address_line2] if line]
-                address_data["line"] = lines
-            if self.city:
-                address_data["city"] = self.city
-            if self.state_province:
-                address_data["state"] = self.state_province
-            if self.postal_code:
-                address_data["postalCode"] = self.postal_code
+            
+            if address_line1 or address_line2:
+                lines = [line for line in [address_line1, address_line2] if line]
+                if lines:
+                    address_data["line"] = lines
+                    
+            if city:
+                address_data["city"] = city
+            if state_province:
+                address_data["state"] = state_province
+            if postal_code:
+                address_data["postalCode"] = postal_code
             if self.country:
                 address_data["country"] = self.country
                 
@@ -301,8 +366,12 @@ class Patient(models.Model):
             self.patient_id = f"PAT-{str(uuid.uuid4())[:8].upper()}"
         
         # If legacy name field is provided but structured fields aren't, populate them
-        if self.name and not self.given_name and not self.family_name:
-            name_parts = self.name.strip().split()
+        legacy_name = self.get_encrypted_field('name')
+        given_name = self.get_encrypted_field('given_name')
+        family_name = self.get_encrypted_field('family_name')
+        
+        if legacy_name and not given_name and not family_name:
+            name_parts = legacy_name.strip().split()
             if len(name_parts) >= 2:
                 self.given_name = name_parts[0]
                 self.family_name = name_parts[-1]
@@ -313,7 +382,7 @@ class Patient(models.Model):
                 self.family_name = name_parts[0]  # Use same for both if only one name
         
         # Ensure legacy name field is populated from structured fields
-        if not self.name and (self.given_name or self.family_name):
+        if not legacy_name and (given_name or family_name):
             self.name = self.full_name
         
         super().save(*args, **kwargs)
