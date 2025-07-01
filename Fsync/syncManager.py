@@ -161,33 +161,181 @@ class FHIRSyncService:
         return self._perform_sync_operation(queue_item, fhir_data)
     
     def _extract_model_data(self, model_instance) -> Dict:
-        """Extract data from Django model instance"""
+        """Extract data from Django model instance, handling encrypted fields properly"""
+        from .mappers import map_to_fhir, get_mapper
+
         data = {}
-        
-        # Get all field values
-        for field in model_instance._meta.fields:
-            field_name = field.name
-            value = getattr(model_instance, field_name)
-            
-            # Convert to serializable format
-            if hasattr(value, 'isoformat'):
-                value = value.isoformat()
-            elif hasattr(value, '__str__'):
-                value = str(value)
-            
-            data[field_name] = value
-        
-        # Include properties if they exist (like full_name, age, etc.)
-        for attr_name in ['full_name', 'age', 'full_address']:
-            if hasattr(model_instance, attr_name):
-                try:
-                    value = getattr(model_instance, attr_name)
-                    data[attr_name] = value
-                except Exception:
-                    pass  # Skip if property fails
-        
+
+        # Try to use FHIR mapper first (handles encryption properly)
+        try:
+            resource_type = model_instance._meta.model_name.title()
+            mapper = get_mapper(resource_type)
+
+            if mapper:
+                # Use mapper which handles encrypted fields properly
+                fhir_data = mapper.to_fhir(model_instance)
+                # Extract useful fields from FHIR data back to flat structure
+                data.update(self._flatten_fhir_data(fhir_data))
+            else:
+                # Fallback to manual extraction
+                data = self._manual_extract_data(model_instance)
+
+        except Exception as e:
+            logger.warning(f"Mapper extraction failed, using manual extraction: {e}")
+            data = self._manual_extract_data(model_instance)
+
         return data
-    
+
+    def _flatten_fhir_data(self, fhir_data: Dict) -> Dict:
+        """Convert FHIR data back to flat structure for compatibility"""
+        flattened = {}
+
+        # Extract basic fields
+        flattened['resourceType'] = fhir_data.get('resourceType')
+        flattened['id'] = fhir_data.get('id')
+        flattened['active'] = fhir_data.get('active')
+
+        # Extract name information
+        names = fhir_data.get('name', [])
+        if names and isinstance(names, list) and len(names) > 0:
+            name = names[0]
+            flattened['family_name'] = name.get('family')
+            given_names = name.get('given', [])
+            if given_names:
+                flattened['given_name'] = given_names[0]
+                if len(given_names) > 1:
+                    flattened['middle_name'] = ' '.join(given_names[1:])
+
+            prefixes = name.get('prefix', [])
+            if prefixes:
+                flattened['name_prefix'] = prefixes[0]
+
+            suffixes = name.get('suffix', [])
+            if suffixes:
+                flattened['name_suffix'] = suffixes[0]
+
+        # Extract telecom
+        telecoms = fhir_data.get('telecom', [])
+        for telecom in telecoms:
+            if telecom.get('system') == 'phone':
+                if telecom.get('use') == 'home':
+                    flattened['primary_phone'] = telecom.get('value')
+                elif telecom.get('use') == 'work':
+                    flattened['secondary_phone'] = telecom.get('value')
+            elif telecom.get('system') == 'email':
+                flattened['email'] = telecom.get('value')
+
+        # Extract address
+        addresses = fhir_data.get('address', [])
+        if addresses and isinstance(addresses, list) and len(addresses) > 0:
+            address = addresses[0]
+            lines = address.get('line', [])
+            if lines:
+                flattened['address_line1'] = lines[0]
+                if len(lines) > 1:
+                    flattened['address_line2'] = lines[1]
+
+            flattened['city'] = address.get('city')
+            flattened['state_province'] = address.get('state')
+            flattened['postal_code'] = address.get('postalCode')
+            flattened['country'] = address.get('country')
+
+            # Extract other fields
+            flattened['gender'] = fhir_data.get('gender')
+            flattened['birth_date'] = fhir_data.get('birthDate')
+
+            # Extract identifiers
+        identifiers = fhir_data.get('identifier', [])
+        for identifier in identifiers:
+            identifier_type = identifier.get('type', {})
+            if identifier_type.get('text') == 'National ID':
+                flattened['national_id'] = identifier.get('value')
+            elif 'coding' in identifier_type:
+                coding = identifier_type['coding'][0] if identifier_type['coding'] else {}
+                if coding.get('code') == 'MR':
+                    flattened['medical_record_number'] = identifier.get('value')
+
+        # Remove None values
+        return {k: v for k, v in flattened.items() if v is not None}
+
+    def _manual_extract_data(self, model_instance) -> Dict:
+        """Manual data extraction as fallback"""
+        data = {}
+
+        # Handle Patient model specifically (since it has encrypted fields)
+        if hasattr(model_instance, '_meta') and model_instance._meta.model_name == 'patient':
+            # Use the Patient model's helper method for encrypted fields
+            encrypted_fields = [
+                'given_name', 'family_name', 'middle_name', 'name_prefix', 'name_suffix', 'name',
+                'national_id', 'medical_record_number', 'insurance_number',
+                'primary_phone', 'secondary_phone', 'email',
+                'address_line1', 'address_line2', 'city', 'state_province', 'postal_code',
+                'emergency_contact_name', 'emergency_contact_relationship', 'emergency_contact_phone',
+                'blood_type', 'allergies'
+            ]
+
+            # Get encrypted fields safely
+            for field_name in encrypted_fields:
+                try:
+                    value = model_instance.get_encrypted_field(field_name)
+                    if value is not None:
+                        data[field_name] = str(value)
+                except Exception as e:
+                    logger.warning(f"Could not extract encrypted field {field_name}: {e}")
+                    data[field_name] = None
+
+            # Get non-encrypted fields normally
+            for field in model_instance._meta.fields:
+                field_name = field.name
+                if field_name not in encrypted_fields:
+                    try:
+                        value = getattr(model_instance, field_name)
+
+                        # Convert to serializable format
+                        if hasattr(value, 'isoformat'):
+                            value = value.isoformat()
+                        elif value is not None:
+                            value = str(value)
+
+                        data[field_name] = value
+                    except Exception as e:
+                        logger.warning(f"Could not extract field {field_name}: {e}")
+                        data[field_name] = None
+
+            # Include properties safely
+            for attr_name in ['full_name', 'age', 'full_address']:
+                if hasattr(model_instance, attr_name):
+                    try:
+                        value = getattr(model_instance, attr_name)
+                        if value is not None:
+                            data[attr_name] = str(value)
+                    except Exception as e:
+                        logger.warning(f"Could not extract property {attr_name}: {e}")
+                        data[attr_name] = None
+
+        else:
+            # For non-Patient models, use the original logic
+            for field in model_instance._meta.fields:
+                field_name = field.name
+                try:
+                    value = getattr(model_instance, field_name)
+
+                    # Convert to serializable format
+                    if hasattr(value, 'isoformat'):
+                        value = value.isoformat()
+                    elif hasattr(value, '__str__') and value is not None:
+                        value = str(value)
+
+                    data[field_name] = value
+                except Exception as e:
+                    logger.warning(f"Could not extract field {field_name}: {e}")
+                    data[field_name] = None
+
+        return data
+
+
+
+
     def _perform_sync_operation(self, queue_item: SyncQueue, fhir_data: Dict) -> bool:
         """Perform the actual sync operation"""
         # Determine operation

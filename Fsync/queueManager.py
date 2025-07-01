@@ -82,28 +82,6 @@ class SyncQueueManager:
             sync_rule=sync_rule
         )
     
-    @staticmethod
-    def process_queue(limit: int = 50) -> Dict[str, int]:
-        from .syncManager import FHIRSyncService
-        """Process pending queue items"""
-        sync_service = FHIRSyncService()
-        
-        # Get pending items
-        pending_items = SyncQueue.objects.filter(
-            status='pending',
-            scheduled_at__lte=timezone.now()
-        ).order_by('priority', 'created_at')[:limit]
-        
-        results = {'success': 0, 'failed': 0, 'total': len(pending_items)}
-        
-        for item in pending_items:
-            success = sync_service.sync_resource(item)
-            if success:
-                results['success'] += 1
-            else:
-                results['failed'] += 1
-        
-        return results
     
     @staticmethod
     def retry_failed_items(max_retries: int = 3) -> Dict[str, int]:
@@ -160,3 +138,62 @@ class SyncQueueManager:
             stats['by_resource_type'][resource_type] = type_stats
         
         return stats
+    
+    @staticmethod
+    def process_queue(limit: int = 50) -> Dict[str, int]:
+        """Process pending queue items with proper error handling for encrypted fields"""
+        from .syncManager import FHIRSyncService
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        try:
+            sync_service = FHIRSyncService()
+        except Exception as e:
+            logger.error(f"Failed to initialize sync service: {e}")
+            return {'success': 0, 'failed': 0, 'total': 0, 'error': str(e)}
+
+        # Get pending items
+        try:
+            pending_items = SyncQueue.objects.filter(
+                status='pending',
+                scheduled_at__lte=timezone.now()
+            ).order_by('priority', 'created_at')[:limit]
+        except Exception as e:
+            logger.error(f"Failed to fetch pending items: {e}")
+            return {'success': 0, 'failed': 0, 'total': 0, 'error': str(e)}
+
+        results = {'success': 0, 'failed': 0, 'total': len(pending_items)}
+
+        for item in pending_items:
+            try:
+                # Check if this is a Patient resource and ensure fhir_data is properly populated
+                if item.resource_type == 'Patient' and item.source_object:
+                    try:
+                        # Refresh the fhir_data from the source object
+                        if hasattr(item.source_object, 'to_fhir_dict'):
+                            item.fhir_data = item.source_object.to_fhir_dict()
+                            item.save(update_fields=['fhir_data'])
+                            logger.info(f"Refreshed FHIR data for queue item {item.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to refresh FHIR data for item {item.id}: {e}")
+                        item.mark_failed(f"Failed to refresh FHIR data: {e}")
+                        results['failed'] += 1
+                        continue
+
+                # Attempt to sync the resource
+                success = sync_service.sync_resource(item)
+                if success:
+                    results['success'] += 1
+                else:
+                    results['failed'] += 1
+
+            except Exception as e:
+                logger.error(f"Exception processing queue item {item.id}: {e}")
+                try:
+                    item.mark_failed(f"Processing exception: {e}")
+                except Exception as mark_error:
+                    logger.error(f"Failed to mark item as failed: {mark_error}")
+                results['failed'] += 1
+
+        return results
