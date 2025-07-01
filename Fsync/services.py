@@ -8,7 +8,7 @@ from django.utils import timezone
 import re
 from datetime import datetime
 from core.settings import FHIR_SERVER_BASE_URL
-
+from .queueManager import SyncQueueManager
 
 #  Declaring base url. Pointing from settings.py 
 base_url = FHIR_SERVER_BASE_URL

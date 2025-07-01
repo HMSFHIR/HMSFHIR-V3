@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional, Any, Tuple
-from services import SyncQueue, SyncRule
+from .models import SyncQueue, SyncRule
 from django.utils import timezone
-from syncManager import FHIRSyncService
 from django.contrib.contenttypes.models import ContentType
 
 class SyncQueueManager:
@@ -85,6 +84,7 @@ class SyncQueueManager:
     
     @staticmethod
     def process_queue(limit: int = 50) -> Dict[str, int]:
+        from .syncManager import FHIRSyncService
         """Process pending queue items"""
         sync_service = FHIRSyncService()
         
@@ -107,6 +107,7 @@ class SyncQueueManager:
     
     @staticmethod
     def retry_failed_items(max_retries: int = 3) -> Dict[str, int]:
+        from .syncManager import FHIRSyncService
         """Retry failed queue items"""
         failed_items = SyncQueue.objects.filter(
             status='failed',

@@ -3,10 +3,10 @@ import requests
 import logging
 from Fsync.models import SyncLog
 from core import settings
-from services import SyncQueue, FHIRDataMapper, FHIRSyncConfig, FHIRDataValidator
+from .services import FHIRDataMapper, FHIRDataValidator
 from django.utils import timezone
 from typing import Dict, Any, Tuple
-
+from .models import SyncQueue, FHIRSyncConfig
 logger = logging.getLogger(__name__)
 
 

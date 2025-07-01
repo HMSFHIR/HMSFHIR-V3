@@ -20,9 +20,7 @@ import json
 from Fsync.tasks import (
     full_sync_task, 
     process_sync_queue_task, 
-    cleanup_sync_tasks, 
     retry_failed_syncs_task,
-    sync_single_resource_task
 )
 
 class FHIRSyncConfigViewSet(viewsets.ModelViewSet):
@@ -142,9 +140,7 @@ def start_task(request):
         task_map = {
             'full_sync': full_sync_task,
             'process_queue': process_sync_queue_task,
-            'cleanup': cleanup_sync_tasks,
             'retry_failed': retry_failed_syncs_task,
-            'single_resource': sync_single_resource_task,
         }
         
         if task_name in task_map:

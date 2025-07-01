@@ -20,9 +20,10 @@ Key Features:
 """
 
 from celery import shared_task
-from .services import SyncQueueManager, FHIRSyncService
+from .syncManager import FHIRSyncService
+from .queueManager import SyncQueueManager
 from .models import SyncRule, SyncQueue, SyncLog
-from .mappers import FHIR_MAPPERS
+from .mappers import FHIRMapper
 from django.apps import apps
 from datetime import timedelta
 from django.utils import timezone
@@ -33,7 +34,7 @@ from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from requests.exceptions import ConnectionError, RequestException
 import traceback
-from tasksUtils import get_resource_id, validate_fhir_data
+from .tasksUtils import get_resource_id, validate_fhir_data
 logger = logging.getLogger(__name__)
 
 
@@ -122,7 +123,7 @@ def full_sync_task(self, resource_types=None):
                 model_class = apps.get_model(rule.hms_model_app, rule.hms_model_name)
                 
                 # Get the appropriate FHIR mapper function
-                mapper_func = FHIR_MAPPERS.get(rule.resource_type)
+                mapper_func = FHIRMapper.get(rule.resource_type)
                 if not mapper_func:
                     logger.warning(f"No mapper found for {rule.resource_type}")
                     continue
