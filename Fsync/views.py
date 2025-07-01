@@ -3,8 +3,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import FHIRSyncConfig, SyncRule, SyncQueue
-from .services import FHIRSyncService, SyncQueueManager
+from .models import FHIRSyncConfig , SyncQueue
+#from .models import SyncRule
+from .syncManager import FHIRSyncService
+from .queueManager import SyncQueueManager
 from .tasks import full_sync_task, process_sync_queue_task, retry_failed_syncs_task
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -15,7 +17,13 @@ from celery import current_app
 from celery.result import AsyncResult
 from datetime import datetime, timedelta
 import json
-
+from Fsync.tasks import (
+    full_sync_task, 
+    process_sync_queue_task, 
+    cleanup_sync_tasks, 
+    retry_failed_syncs_task,
+    sync_single_resource_task
+)
 
 class FHIRSyncConfigViewSet(viewsets.ModelViewSet):
     queryset = FHIRSyncConfig.objects.all()
@@ -97,13 +105,7 @@ class SyncOperationViewSet(viewsets.ViewSet):
     
 
 
-from Fsync.tasks import (
-    full_sync_task, 
-    process_sync_queue_task, 
-    cleanup_sync_tasks, 
-    retry_failed_syncs_task,
-    sync_single_resource_task
-)
+
 
 #@login_required
 def admin_dashboard(request):
