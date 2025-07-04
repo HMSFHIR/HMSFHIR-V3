@@ -1,5 +1,473 @@
 {% extends "autht/main.html" %}
-
+{% load static %}
 {% block content %}
-<p>Ready!!!</p>
+<!-- Dashboard Stylesheet -->
+<link rel="stylesheet" type="text/css" href="{% static 'Patients/dashboard.css' %}">
+
+<div class="dashboard-header">
+    <h1 class="dashboard-title">
+        <i class="fas fa-download"></i>
+        Pull Patient Data from FHIR
+    </h1>
+    <div class="dashboard-actions">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Request Form -->
+<div class="fhir-request-container">
+    <div class="fhir-request-form">
+        <h3>Request Patient Information</h3>
+        <p>Enter either Patient ID or National ID to retrieve patient data from the FHIR server</p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="patient_id">Patient ID:</label>
+                <input type="text" id="patient_id" name="patient_id" class="form-control" 
+                       placeholder="Enter FHIR Patient ID" value="{{ patient_id|default:'' }}">
+            </div>
+            
+            <div class="form-divider">
+                <span>OR</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="national_id">National ID:</label>
+                <input type="text" id="national_id" name="national_id" class="form-control" 
+                       placeholder="Enter National ID" value="{{ national_id|default:'' }}">
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-download"></i>
+                    Pull Patient Data
+                </button>
+                <button type="button" class="btn btn-outline" onclick="clearForm()">
+                    <i class="fas fa-times"></i>
+                    Clear
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Patient Data Display -->
+{% if patient_data %}
+<div class="patient-data-container">
+    <div class="patient-data-header">
+        <h3>
+            <i class="fas fa-user"></i>
+            Patient Information
+        </h3>
+        <div class="patient-actions">
+            <button class="btn btn-primary" onclick="savePatient()">
+                <i class="fas fa-save"></i>
+                Save to Database
+            </button>
+            <button class="btn btn-outline" onclick="printData()">
+                <i class="fas fa-print"></i>
+                Print
+            </button>
+        </div>
+    </div>
+    
+    <div class="patient-info-grid">
+        <!-- Basic Information -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="fas fa-user"></i>
+                <h4>Basic Information</h4>
+            </div>
+            <div class="info-card-body">
+                <div class="info-item">
+                    <label>Full Name:</label>
+                    <span>{{ patient_data.name.full }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Patient ID:</label>
+                    <span>{{ patient_data.id }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Gender:</label>
+                    <span>{{ patient_data.gender|title }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Birth Date:</label>
+                    <span>{{ patient_data.birth_date }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Status:</label>
+                    <span class="status {% if patient_data.active %}active{% else %}inactive{% endif %}">
+                        {{ patient_data.active|yesno:"Active,Inactive" }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <label>Marital Status:</label>
+                    <span>{{ patient_data.marital_status }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="fas fa-phone"></i>
+                <h4>Contact Information</h4>
+            </div>
+            <div class="info-card-body">
+                {% if patient_data.telecom.phone %}
+                    <div class="info-item">
+                        <label>Phone:</label>
+                        <div class="contact-list">
+                            {% for phone in patient_data.telecom.phone %}
+                                <span class="contact-item">{{ phone }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if patient_data.telecom.email %}
+                    <div class="info-item">
+                        <label>Email:</label>
+                        <div class="contact-list">
+                            {% for email in patient_data.telecom.email %}
+                                <span class="contact-item">{{ email }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if patient_data.address %}
+                    <div class="info-item">
+                        <label>Address:</label>
+                        <div class="address-list">
+                            {% for address in patient_data.address %}
+                                <div class="address-item">
+                                    {% if address.line %}
+                                        <div>{{ address.line|join:", " }}</div>
+                                    {% endif %}
+                                    <div>
+                                        {{ address.city }}{% if address.state %}, {{ address.state }}{% endif %}
+                                        {{ address.postal_code }}
+                                    </div>
+                                    {% if address.country %}
+                                        <div>{{ address.country }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Identifiers -->
+        {% if patient_data.identifiers %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="fas fa-id-card"></i>
+                <h4>Identifiers</h4>
+            </div>
+            <div class="info-card-body">
+                {% for identifier in patient_data.identifiers %}
+                    <div class="info-item">
+                        <label>{{ identifier.type|default:"ID" }}:</label>
+                        <span>{{ identifier.value }}</span>
+                        {% if identifier.system %}
+                            <small>({{ identifier.system }})</small>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Emergency Contacts -->
+        {% if patient_data.contact %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="fas fa-user-friends"></i>
+                <h4>Emergency Contacts</h4>
+            </div>
+            <div class="info-card-body">
+                {% for contact in patient_data.contact %}
+                    <div class="contact-person">
+                        <div class="info-item">
+                            <label>Name:</label>
+                            <span>{{ contact.name.full }}</span>
+                        </div>
+                        {% if contact.telecom.phone %}
+                            <div class="info-item">
+                                <label>Phone:</label>
+                                <span>{{ contact.telecom.phone|join:", " }}</span>
+                            </div>
+                        {% endif %}
+                        {% if contact.relationship %}
+                            <div class="info-item">
+                                <label>Relationship:</label>
+                                <span>{{ contact.relationship|join:", " }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Raw FHIR Data (for debugging) -->
+    <div class="raw-data-container">
+        <button class="btn btn-outline" onclick="toggleRawData()">
+            <i class="fas fa-code"></i>
+            Show/Hide Raw FHIR Data
+        </button>
+        <div id="rawData" class="raw-data" style="display: none;">
+            <pre>{{ patient_data.raw_data|pprint }}</pre>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Error Display -->
+{% if not success and error %}
+<div class="error-container">
+    <div class="error-message">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h4>Error</h4>
+        <p>{{ error }}</p>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function clearForm() {
+    document.getElementById('patient_id').value = '';
+    document.getElementById('national_id').value = '';
+}
+
+function toggleRawData() {
+    const rawData = document.getElementById('rawData');
+    if (rawData.style.display === 'none') {
+        rawData.style.display = 'block';
+    } else {
+        rawData.style.display = 'none';
+    }
+}
+
+function savePatient() {
+    // Add functionality to save patient to your local database
+    alert('Save patient functionality - implement based on your needs');
+}
+
+function printData() {
+    window.print();
+}
+</script>
+
+<style>
+.fhir-request-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-divider {
+    text-align: center;
+    margin: 2rem 0;
+    position: relative;
+}
+
+.form-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #ddd;
+}
+
+.form-divider span {
+    background: white;
+    padding: 0 1rem;
+    color: #666;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.patient-data-container {
+    margin-top: 2rem;
+}
+
+.patient-data-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #eee;
+}
+
+.patient-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.patient-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.info-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.info-card-header {
+    background: #f8f9fa;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-card-header i {
+    color: #007bff;
+}
+
+.info-card-body {
+    padding: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+}
+
+.info-item label {
+    font-weight: 600;
+    min-width: 120px;
+    color: #333;
+}
+
+.info-item span {
+    flex: 1;
+    color: #666;
+}
+
+.status.active {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.status.inactive {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.contact-list, .address-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.contact-item {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.address-item {
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.contact-person {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.contact-person:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.raw-data-container {
+    margin-top: 2rem;
+}
+
+.raw-data {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-top: 1rem;
+    overflow-x: auto;
+}
+
+.raw-data pre {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #333;
+}
+
+.error-container {
+    margin-top: 2rem;
+    padding: 2rem;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    color: #721c24;
+}
+
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.error-message i {
+    font-size: 2rem;
+    color: #dc3545;
+}
+</style>
 {% endblock %}
