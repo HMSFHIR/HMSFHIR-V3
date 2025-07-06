@@ -2,6 +2,7 @@ from django.urls import path
 from . import views 
 from MedicalRecords import views as Mdviews
 from Fsync.views import admin_dashboard
+from Bridge.views import PatientRequestView
 
 urlpatterns = [
     path("dashboard", views.Dashboard, name="Dashboard"),
@@ -13,6 +14,7 @@ urlpatterns = [
     path("patients/edit/<str:patient_id>/", views.EditPatient, name="EditPatient"),
     path("patients/<str:patient_id>/summary/", views.ViewRecordsSummary, name="ViewRecordsSummary"),
     path("patients/delete/<str:patient_id>/", views.DeletePatient, name="DeletePatient"),
+    path('request-patient/', PatientRequestView.as_view(), name='request_patient'),
 ]
 
 
