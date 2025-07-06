@@ -294,12 +294,21 @@
         <div class="sidebar-section">
             <div class="sidebar-title">Main</div>
             <ul class="sidebar-menu">
+                {% if user.user_type == 'admin' or user.user_type == 'IT' %}
                 <li>
-                    <a href="{% url 'Dashboard' %}" class="{% if request.resolver_match.url_name == 'Dashboard' %}active{% endif %}">
+                    <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                         <i class="fas fa-tachometer-alt"></i>
                         Dashboard
                     </a>
                 </li>
+                {% else %}
+                <li>
+                    <a href="{% url 'Dashboard' %}" class="{% if request.resolver_match.url_name == 'UserDashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </li>
+                {% endif %}
                 
                 <!-- Show appointments for all roles except IT -->
                 {% if user.user_type != 'IT' %}
@@ -365,7 +374,7 @@
                     </a>
                 </li>
                 <li>
-                    <a href="#" class="{% if 'logs' in request.path %}active{% endif %}"> 
+                    <a href="{% url 'logview' %}" class="{% if 'logs' in request.path %}active{% endif %}"> 
                         <i class="fas fa-clipboard-list"></i>
                         Logs
                     </a>

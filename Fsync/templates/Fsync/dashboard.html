@@ -1,12 +1,291 @@
-{% extends "autht/main.html" %}
+{% extends 'autht/main.html' %}
+{% load static %}
 
-{% block title %}Patient Dashboard - HMS{% endblock %}
-
-{% block extra_css %}
-
-{% endblock %}
+{% block title %}Dashboard - Zendenta{% endblock %}
 
 {% block content %}
 
+<link rel="stylesheet" href="{% static 'Fsync/dash.css' %}">
+<script src="{% static 'js/dashboard.js' %}"></script>
+
+<div class="admin-dashboard">
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>{{ total_practitioners }}</h3>
+                        <p>Total Practitioners</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>{{ total_staff }}</h3>
+                        <p>Staff Members</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>{{ active_syncs }}</h3>
+                        <p>Active Syncs</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>{{ sync_errors }}</h3>
+                        <p>Sync Errors</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Tabs -->
+            <div class="content-tabs">
+                <div class="tab-nav">
+                    <button class="tab-btn active" data-tab="practitioners">Practitioners</button>
+                    <button class="tab-btn" data-tab="staff">Staff</button>
+                    <button class="tab-btn" data-tab="sync">Sync Status</button>
+                </div>
+
+                <!-- Practitioners Tab -->
+                <div class="tab-content active" id="practitioners">
+                    <div class="table-header">
+                        <h3>Recent Practitioners</h3>
+                        <div class="table-actions">
+                            <button class="btn-filter">
+                                <i class="fas fa-filter"></i> Filters
+                            </button>
+                            <button class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Practitioner
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="data-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Specialty</th>
+                                    <th>Status</th>
+                                    <th>Patients</th>
+                                    <th>Rating</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for practitioner in practitioners %}
+                                <tr>
+                                    <td>
+                                        <div class="user-cell">
+                                            <img src="{{ practitioner.avatar.url|default:'/static/images/default-avatar.png' }}" alt="{{ practitioner.name }}" class="user-avatar-small">
+                                            <div>
+                                                <strong>{{ practitioner.name }}</strong>
+                                                <small>{{ practitioner.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ practitioner.specialty }}</td>
+                                    <td>
+                                        <span class="status-badge {% if practitioner.is_active %}active{% else %}inactive{% endif %}">
+                                            {% if practitioner.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ practitioner.patient_count }}</td>
+                                    <td>
+                                        <div class="rating">
+                                            {% for i in "12345" %}
+                                                <i class="fas fa-star {% if forloop.counter <= practitioner.rating %}filled{% endif %}"></i>
+                                            {% endfor %}
+                                            <span>{{ practitioner.rating }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn-icon-small">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-icon-small">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No practitioners found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Staff Tab -->
+                <div class="tab-content" id="staff">
+                    <div class="table-header">
+                        <h3>Staff Members</h3>
+                        <div class="table-actions">
+                            <button class="btn-filter">
+                                <i class="fas fa-filter"></i> Filters
+                            </button>
+                            <button class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Staff
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="data-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for staff in staff_members %}
+                                <tr>
+                                    <td>
+                                        <div class="user-cell">
+                                            <img src="{{ staff.avatar.url|default:'/static/images/default-avatar.png' }}" alt="{{ staff.name }}" class="user-avatar-small">
+                                            <div>
+                                                <strong>{{ staff.name }}</strong>
+                                                <small>{{ staff.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ staff.role }}</td>
+                                    <td>{{ staff.department }}</td>
+                                    <td>
+                                        <span class="status-badge {% if staff.is_active %}active{% else %}inactive{% endif %}">
+                                            {% if staff.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn-icon-small">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-icon-small">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No staff members found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sync Status Tab -->
+                <div class="tab-content" id="sync">
+                    <div class="table-header">
+                        <h3>FHIR Sync Status</h3>
+                        <div class="table-actions">
+                            <button class="btn-filter">
+                                <i class="fas fa-filter"></i> Filters
+                            </button>
+                            <button class="btn-primary" onclick="refreshSync()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="data-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Resource Type</th>
+                                    <th>Last Sync</th>
+                                    <th>Status</th>
+                                    <th>Records</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sync in sync_status %}
+                                <tr>
+                                    <td>{{ sync.resource_type }}</td>
+                                    <td>{{ sync.last_sync|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        <span class="status-badge {% if sync.status == 'success' %}success{% elif sync.status == 'error' %}error{% else %}warning{% endif %}">
+                                            {{ sync.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ sync.record_count }}</td>
+                                    <td>
+                                        <button class="btn-icon-small" onclick="syncResource('{{ sync.resource_type }}')">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                        <button class="btn-icon-small">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No sync data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+// Tab switching functionality
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const tabId = this.dataset.tab;
+        
+        // Remove active class from all tabs and contents
+        document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        this.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    });
+});
+
+// Refresh functions
+function refreshSync() {
+    // Add your sync refresh logic here
+    console.log('Refreshing sync status...');
+}
+
+function syncResource(resourceType) {
+    // Add your resource sync logic here
+    console.log('Syncing resource:', resourceType);
+}
+</script>
 
 {% endblock %}

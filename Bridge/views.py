@@ -438,3 +438,205 @@ def save_to_db(request):
 
     return redirect("PatientList")  # Redirect to patient list after saving
 
+
+def extract_patient_data_from_fhir(fhir_data):
+    """
+    Extract patient data from FHIR JSON and map to Django model fields
+    """
+    patient_data = {}
+    
+    # Patient ID
+    patient_data['patient_id'] = fhir_data.get('id')
+    
+    # Active status
+    patient_data['active'] = fhir_data.get('active', True)
+    
+    # Extract name information
+    names = fhir_data.get('name', [])
+    if names:
+        # Use the first name entry (usually the official name)
+        name = names[0]
+        patient_data['family_name'] = name.get('family', '')
+        
+        given_names = name.get('given', [])
+        if given_names:
+            patient_data['given_name'] = given_names[0]
+            if len(given_names) > 1:
+                patient_data['middle_name'] = ' '.join(given_names[1:])
+        
+        # Handle prefix and suffix
+        prefixes = name.get('prefix', [])
+        if prefixes:
+            patient_data['name_prefix'] = ' '.join(prefixes)
+            
+        suffixes = name.get('suffix', [])
+        if suffixes:
+            patient_data['name_suffix'] = ' '.join(suffixes)
+    
+    # Gender
+    patient_data['gender'] = fhir_data.get('gender', 'unknown')
+    
+    # Birth date
+    birth_date = fhir_data.get('birthDate')
+    if birth_date:
+        try:
+            patient_data['birth_date'] = datetime.strptime(birth_date, '%Y-%m-%d').date()
+        except ValueError:
+            logger.warning(f"Invalid birth date format: {birth_date}")
+    
+    # Extract identifiers
+    identifiers = fhir_data.get('identifier', [])
+    for identifier in identifiers:
+        value = identifier.get('value', '')
+        
+        # Try to determine identifier type based on value pattern or system
+        if value.startswith('GHA-') or value.startswith('SSN-'):
+            patient_data['national_id'] = value
+        elif value.startswith('MRN-'):
+            patient_data['medical_record_number'] = value
+        elif identifier.get('type', {}).get('coding', [{}])[0].get('code') == 'MR':
+            patient_data['medical_record_number'] = value
+        elif 'national' in identifier.get('type', {}).get('text', '').lower():
+            patient_data['national_id'] = value
+    
+    # Extract telecom information
+    telecoms = fhir_data.get('telecom', [])
+    phone_count = 0
+    for telecom in telecoms:
+        system = telecom.get('system', '')
+        value = telecom.get('value', '')
+        use = telecom.get('use', '')
+        
+        if system == 'phone':
+            if phone_count == 0:
+                patient_data['primary_phone'] = value
+                phone_count += 1
+            elif phone_count == 1:
+                patient_data['secondary_phone'] = value
+                phone_count += 1
+        elif system == 'email':
+            patient_data['email'] = value
+    
+    # Extract address information
+    addresses = fhir_data.get('address', [])
+    if addresses:
+        address = addresses[0]  # Use the first address
+        
+        lines = address.get('line', [])
+        if lines:
+            patient_data['address_line1'] = lines[0]
+            if len(lines) > 1:
+                patient_data['address_line2'] = lines[1]
+        
+        patient_data['city'] = address.get('city', '')
+        patient_data['state_province'] = address.get('state', '')
+        patient_data['postal_code'] = address.get('postalCode', '')
+        patient_data['country'] = address.get('country', 'Ghana')
+    
+    # Extract marital status
+    marital_status = fhir_data.get('maritalStatus', {})
+    if marital_status:
+        codings = marital_status.get('coding', [])
+        if codings:
+            status_code = codings[0].get('code', '')
+            # Map FHIR marital status codes to your model choices
+            status_mapping = {
+                'S': 'single',
+                'M': 'married',
+                'D': 'divorced',
+                'W': 'widowed',
+                'A': 'separated'
+            }
+            patient_data['marital_status'] = status_mapping.get(status_code, 'unknown')
+    
+    # Handle deceased information
+    if 'deceasedBoolean' in fhir_data:
+        patient_data['deceased'] = fhir_data['deceasedBoolean']
+    elif 'deceasedDateTime' in fhir_data:
+        patient_data['deceased'] = True
+        try:
+            deceased_date = datetime.strptime(fhir_data['deceasedDateTime'], '%Y-%m-%d').date()
+            patient_data['deceased_date'] = deceased_date
+        except ValueError:
+            logger.warning(f"Invalid deceased date format: {fhir_data['deceasedDateTime']}")
+    
+    # Extract extensions (like last arrived date)
+    extensions = fhir_data.get('extension', [])
+    for extension in extensions:
+        if 'last-arrived' in extension.get('url', ''):
+            last_arrived = extension.get('valueDate')
+            if last_arrived:
+                try:
+                    patient_data['last_arrived'] = datetime.strptime(last_arrived, '%Y-%m-%d').date()
+                except ValueError:
+                    logger.warning(f"Invalid last arrived date format: {last_arrived}")
+    
+    # Remove None values to avoid overwriting existing data unnecessarily
+    patient_data = {k: v for k, v in patient_data.items() if v is not None and v != ''}
+    
+    return patient_data
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_fhir_patient_api(request):
+    """
+    Alternative API endpoint for saving FHIR patient data
+    Returns JSON response instead of redirecting
+    """
+    try:
+        fhir_data = json.loads(request.body.decode('utf-8'))
+        
+        if fhir_data.get('resourceType') != 'Patient':
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid resource type. Expected Patient'
+            }, status=400)
+        
+        patient_data = extract_patient_data_from_fhir(fhir_data)
+        
+        # Create or update patient (similar logic as above)
+        existing_patient = None
+        patient_id = patient_data.get('patient_id')
+        
+        if patient_id:
+            try:
+                existing_patient = Patient.objects.get(patient_id=patient_id)
+            except Patient.DoesNotExist:
+                pass
+        
+        if existing_patient:
+            for field, value in patient_data.items():
+                if value is not None:
+                    setattr(existing_patient, field, value)
+            existing_patient.fhir_id = fhir_data.get('id')
+            existing_patient.last_sync = datetime.now()
+            existing_patient.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Patient {existing_patient.full_name} updated successfully',
+                'patient_id': existing_patient.patient_id
+            })
+        else:
+            new_patient = Patient(**patient_data)
+            new_patient.fhir_id = fhir_data.get('id')
+            new_patient.last_sync = datetime.now()
+            new_patient.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Patient {new_patient.full_name} created successfully',
+                'patient_id': new_patient.patient_id
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -5,6 +5,7 @@ from Patients.views import Dashboard, PatientList, AppointmentView, FHIRSync
 from MedicalRecords.views import MedicalRecordsView
 from Practitioner.views import Practitioners
 from Fsync.views import admin_dashboard
+from Fsync.views import logview
 
 urlpatterns = [
     path('', views.practitioner_login, name='login'),
@@ -14,6 +15,7 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('doctor-dashboard/', views.doctor_dashboard, name='doctor_dashboard'),
     path('nurse-dashboard/', views.nurse_dashboard, name='nurse_dashboard'),
+    path('logview/', logview, name='logview'),
     
 
 

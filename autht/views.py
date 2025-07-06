@@ -58,18 +58,8 @@ def practitioner_logout(request):
 
 @login_required
 def dashboard(request):
-    """Generic dashboard - redirect based on user type"""
-    user = request.user
-    
-    if user.user_type == 'admin':
-        return redirect('admin_dashboard')
-    elif user.user_type == 'doctor':
-        return redirect('doctor_dashboard')
-    elif user.user_type == 'nurse':
-        return redirect('nurse_dashboard')
-    
-    # Fallback dashboard
-    return render(request, 'dashboard/generic.html', {'user': user})
+
+    return render(request, 'autht/dashboard.html')
 
 @login_required
 def admin_dashboard(request):
