@@ -10,7 +10,7 @@ from .models import (
 )
 
 
-# 🌟 Main Encounter Form
+
 class EncounterForm(forms.ModelForm):
     class Meta:
         model = Encounter
