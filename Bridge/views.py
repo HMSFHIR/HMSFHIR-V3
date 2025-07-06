@@ -6,8 +6,12 @@ from django.contrib import messages
 from django.http import JsonResponse
 from core import settings
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 from django.views import View
+from django.http import JsonResponse
+from Patients.models import Patient, FHIRSyncTask
+from django.views.decorators.http import require_http_methods
+from datetime import datetime
+import logging
 
 # FHIR server configuration
 FHIR_SERVER_URL = settings.FHIR_SERVER_BASE_URL
@@ -304,3 +308,133 @@ def ajax_request_patient(request):
         'success': False,
         'error': 'Invalid request method'
     })
+
+
+
+
+logger = logging.getLogger(__name__)
+
+def save_to_db(request):
+    """
+    Save FHIR Patient data to the database
+    Expects JSON data in the request body or as form data
+    """
+    context = {}
+    
+    try:
+        # Get JSON data from request
+        if request.method == 'POST':
+            if request.content_type == 'application/json':
+                # Handle JSON request body
+                fhir_data = json.loads(request.body.decode('utf-8'))
+            else:
+                # Handle form data with JSON string
+                json_string = request.POST.get('fhir_data', '{}')
+                fhir_data = json.loads(json_string)
+        else:
+            # For GET requests, you might want to handle differently
+            # or return an error
+            messages.error(request, "Invalid request method")
+            return redirect("PatientList")
+        
+        # Validate that it's a Patient resource
+        if fhir_data.get('resourceType') != 'Patient':
+            messages.error(request, "Invalid resource type. Expected 'Patient'")
+            return redirect("PatientList")
+        
+        # Extract patient data from FHIR JSON
+        patient_data = extract_patient_data_from_fhir(fhir_data)
+        
+        # Check if patient already exists (by patient_id or identifiers)
+        existing_patient = None
+        patient_id = patient_data.get('patient_id')
+        
+        if patient_id:
+            try:
+                existing_patient = Patient.objects.get(patient_id=patient_id)
+            except Patient.DoesNotExist:
+                pass
+        
+        # If not found by patient_id, try by national_id or medical_record_number
+        if not existing_patient:
+            national_id = patient_data.get('national_id')
+            mrn = patient_data.get('medical_record_number')
+            
+            if national_id:
+                try:
+                    existing_patient = Patient.objects.get(national_id=national_id)
+                except Patient.DoesNotExist:
+                    pass
+            
+            if not existing_patient and mrn:
+                try:
+                    existing_patient = Patient.objects.get(medical_record_number=mrn)
+                except Patient.DoesNotExist:
+                    pass
+        
+        # Create or update patient
+        if existing_patient:
+            # Update existing patient
+            for field, value in patient_data.items():
+                if value is not None:  # Only update non-None values
+                    setattr(existing_patient, field, value)
+            
+            # Update FHIR sync information
+            existing_patient.fhir_id = fhir_data.get('id')
+            existing_patient.last_sync = datetime.now()
+            existing_patient.save()
+            
+            messages.success(request, f"Patient {existing_patient.full_name} updated successfully")
+            logger.info(f"Updated patient: {existing_patient.patient_id}")
+            
+        else:
+            # Create new patient
+            new_patient = Patient(**patient_data)
+            new_patient.fhir_id = fhir_data.get('id')
+            new_patient.last_sync = datetime.now()
+            new_patient.save()
+            
+            messages.success(request, f"Patient {new_patient.full_name} created successfully")
+            logger.info(f"Created new patient: {new_patient.patient_id}")
+        
+        # Update or create FHIR sync task record
+        sync_task, created = FHIRSyncTask.objects.get_or_create(
+            resource_type='Patient',
+            resource_id=patient_data.get('patient_id', fhir_data.get('id')),
+            defaults={
+                'status': 'synced',
+                'synced_at': datetime.now()
+            }
+        )
+        
+        if not created:
+            sync_task.status = 'synced'
+            sync_task.synced_at = datetime.now()
+            sync_task.retry_count = 0
+            sync_task.error_message = None
+            sync_task.save()
+        
+    except json.JSONDecodeError as e:
+        error_msg = f"Invalid JSON data: {str(e)}"
+        messages.error(request, error_msg)
+        logger.error(error_msg)
+        
+    except Exception as e:
+        error_msg = f"Error saving patient data: {str(e)}"
+        messages.error(request, error_msg)
+        logger.error(error_msg)
+        
+        # Log failed sync task
+        try:
+            patient_id = fhir_data.get('id', 'unknown')
+            FHIRSyncTask.objects.create(
+                resource_type='Patient',
+                resource_id=patient_id,
+                status='failed',
+                error_message=str(e)
+            )
+        except:
+            pass
+
+    return redirect("PatientList")  # Redirect to patient list after saving
+
