@@ -1,0 +1,248 @@
+{% extends "autht/main.html" %}
+{% load static %}
+{% block content %}
+<!-- Dashboard Stylesheet -->
+<link rel="stylesheet" type="text/css" href="{% static 'Patients/dashboard.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'Bridge/request.css' %}">
+<script src="{% static 'js/card.js' %}" ></script>
+
+<div class="dashboard-header">
+    <h1 class="dashboard-title">
+        <i class="fas fa-download"></i>
+        Pull Patient Data from FHIR
+    </h1>
+    <div class="dashboard-actions">
+        <a href="{% url 'Dashboard' %}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Request Form -->
+<div class="fhir-request-container">
+    <div class="fhir-request-form">
+        <h3>Request Patient Information</h3>
+        <p>Enter either Patient ID or National ID to retrieve patient data from the FHIR server</p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="patient_id">Patient ID:</label>
+                <input type="text" id="patient_id" name="patient_id" class="form-control" 
+                       placeholder="Enter FHIR Patient ID" value="{{ patient_id|default:'' }}">
+            </div>
+            
+            <div class="form-divider">
+                <span>OR</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="national_id">National ID:</label>
+                <input type="text" id="national_id" name="national_id" class="form-control" 
+                       placeholder="Enter National ID" value="{{ national_id|default:'' }}">
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-download"></i>
+                    Pull Patient Data
+                </button>
+                <button type="button" class="btn btn-outline" onclick="clearForm()">
+                    <i class="fas fa-times"></i>
+                    Clear
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Patient Data Display -->
+{% if patient_data %}
+<div class="patient-data-container">
+    <div class="patient-data-header">
+        <h3>
+            <i class="fas fa-user"></i>
+            Patient Information
+        </h3>
+        <div class="patient-actions">
+            <a href={% url "Save_To_DB" %} class="btn btn-primary">
+                <i class="fas fa-save"></i>
+                Save to Database
+            </a>
+            <button class="btn btn-outline" onclick="printData()">
+                <i class="fas fa-print"></i>
+                Print
+            </button>
+        </div>
+    </div>
+    
+    <div class="patient-info-grid">
+        <!-- Basic Information -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="fas fa-user"></i>
+                <h4>Basic Information</h4>
+            </div>
+            <div class="info-card-body">
+                <div class="info-item">
+                    <label>Full Name:</label>
+                    <span>{{ patient_data.name.full }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Patient ID:</label>
+                    <span>{{ patient_data.id }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Gender:</label>
+                    <span>{{ patient_data.gender|title }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Birth Date:</label>
+                    <span>{{ patient_data.birth_date }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Status:</label>
+                    <span class="status {% if patient_data.active %}active{% else %}inactive{% endif %}">
+                        {{ patient_data.active|yesno:"Active,Inactive" }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <label>Marital Status:</label>
+                    <span>{{ patient_data.marital_status }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="fas fa-phone"></i>
+                <h4>Contact Information</h4>
+            </div>
+            <div class="info-card-body">
+                {% if patient_data.telecom.phone %}
+                    <div class="info-item">
+                        <label>Phone:</label>
+                        <div class="contact-list">
+                            {% for phone in patient_data.telecom.phone %}
+                                <span class="contact-item">{{ phone }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if patient_data.telecom.email %}
+                    <div class="info-item">
+                        <label>Email:</label>
+                        <div class="contact-list">
+                            {% for email in patient_data.telecom.email %}
+                                <span class="contact-item">{{ email }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if patient_data.address %}
+                    <div class="info-item">
+                        <label>Address:</label>
+                        <div class="address-list">
+                            {% for address in patient_data.address %}
+                                <div class="address-item">
+                                    {% if address.line %}
+                                        <div>{{ address.line|join:", " }}</div>
+                                    {% endif %}
+                                    <div>
+                                        {{ address.city }}{% if address.state %}, {{ address.state }}{% endif %}
+                                        {{ address.postal_code }}
+                                    </div>
+                                    {% if address.country %}
+                                        <div>{{ address.country }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Identifiers -->
+        {% if patient_data.identifiers %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="fas fa-id-card"></i>
+                <h4>Identifiers</h4>
+            </div>
+            <div class="info-card-body">
+                {% for identifier in patient_data.identifiers %}
+                    <div class="info-item">
+                        <label>{{ identifier.type|default:"ID" }}:</label>
+                        <span>{{ identifier.value }}</span>
+                        {% if identifier.system %}
+                            <small>({{ identifier.system }})</small>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Emergency Contacts -->
+        {% if patient_data.contact %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <i class="fas fa-user-friends"></i>
+                <h4>Emergency Contacts</h4>
+            </div>
+            <div class="info-card-body">
+                {% for contact in patient_data.contact %}
+                    <div class="contact-person">
+                        <div class="info-item">
+                            <label>Name:</label>
+                            <span>{{ contact.name.full }}</span>
+                        </div>
+                        {% if contact.telecom.phone %}
+                            <div class="info-item">
+                                <label>Phone:</label>
+                                <span>{{ contact.telecom.phone|join:", " }}</span>
+                            </div>
+                        {% endif %}
+                        {% if contact.relationship %}
+                            <div class="info-item">
+                                <label>Relationship:</label>
+                                <span>{{ contact.relationship|join:", " }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Raw FHIR Data (for debugging) -->
+    <div class="raw-data-container">
+        <button class="btn btn-outline" onclick="toggleRawData()">
+            <i class="fas fa-code"></i>
+            Show/Hide Raw FHIR Data
+        </button>
+        <div id="rawData" class="raw-data" style="display: none;">
+            <pre>{{ patient_data.raw_data|pprint }}</pre>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Error Display -->
+{% if not success and error %}
+<div class="error-container">
+    <div class="error-message">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h4>Error</h4>
+        <p>{{ error }}</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

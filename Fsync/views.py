@@ -3,8 +3,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import FHIRSyncConfig, SyncRule, SyncQueue
-from .services import FHIRSyncService, SyncQueueManager
+from .models import FHIRSyncConfig , SyncQueue
+#from .models import SyncRule
+from .syncManager import FHIRSyncService
+from .queueManager import SyncQueueManager
 from .tasks import full_sync_task, process_sync_queue_task, retry_failed_syncs_task
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -15,6 +17,21 @@ from celery import current_app
 from celery.result import AsyncResult
 from datetime import datetime, timedelta
 import json
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
+from django.views.generic import ListView
+from django.utils.decorators import method_decorator
+from .models import SyncLog, SyncQueue
+from Fsync.tasks import (
+    full_sync_task, 
+    process_sync_queue_task, 
+    retry_failed_syncs_task,
+)
+
+
+
+
+
 
 
 class FHIRSyncConfigViewSet(viewsets.ModelViewSet):
@@ -97,13 +114,7 @@ class SyncOperationViewSet(viewsets.ViewSet):
     
 
 
-from Fsync.tasks import (
-    full_sync_task, 
-    process_sync_queue_task, 
-    cleanup_sync_tasks, 
-    retry_failed_syncs_task,
-    sync_single_resource_task
-)
+
 
 #@login_required
 def admin_dashboard(request):
@@ -117,6 +128,50 @@ def admin_dashboard(request):
     }
 
     return render(request, 'Fsync/dashboard.html', context)
+
+
+def logview(request):
+    """View for displaying sync logs with filtering and statistics"""
+    
+    # Get filter level from request
+    level_filter = request.GET.get('level', 'all')
+    
+    # Base queryset
+    logs = SyncLog.objects.all().order_by('-timestamp')
+    
+    # Apply level filter if specified
+    if level_filter and level_filter != 'all':
+        logs = logs.filter(level=level_filter)
+    
+    # Calculate statistics
+    total_logs = SyncLog.objects.count()
+    errors_count = SyncLog.objects.filter(level='ERROR').count()
+    warnings_count = SyncLog.objects.filter(level='WARNING').count()
+    
+    # Calculate active syncs (you might need to adjust this logic based on your model)
+    # This assumes you have a way to determine active syncs
+    # You might need to modify this based on your specific requirements
+    active_syncs = SyncLog.objects.filter(
+        level='INFO',
+        message__icontains='sync started'  # Adjust based on your sync start message
+    ).count()
+    
+    # Pagination
+    paginator = Paginator(logs, 20)  # Show 20 logs per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'sync_logs': page_obj,  # Template expects 'sync_logs'
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+        'total_logs': total_logs,
+        'active_syncs': active_syncs,
+        'errors_count': errors_count,
+        'warnings_count': warnings_count,
+    }
+    
+    return render(request, 'Fsync/logs.html', context)
 
 @login_required
 def analytics_dashboard(request):
@@ -140,9 +195,7 @@ def start_task(request):
         task_map = {
             'full_sync': full_sync_task,
             'process_queue': process_sync_queue_task,
-            'cleanup': cleanup_sync_tasks,
             'retry_failed': retry_failed_syncs_task,
-            'single_resource': sync_single_resource_task,
         }
         
         if task_name in task_map:
@@ -359,3 +412,8 @@ def get_queue_size():
         return 5  # Placeholder
     except:
         return 0
+    
+
+
+
+

@@ -1,651 +1,80 @@
+{% extends "autht/main.html" %}
+{% load static %}
+
 {% block content %}
-<div class="dashboard-header">
-    <h1 class="dashboard-title">
-        <i class="fas fa-users"></i>
-        Patient Dashboard
-    </h1>
-    <div class="dashboard-actions">
-        <a href="{% url 'PatientList' %}" class="btn btn-outline">
-            <i class="fas fa-list"></i>
-            View All Patients
-        </a>
-        <a href="{% url 'add_patient' %}" class="btn btn-primary">
-            <i class="fas fa-user-plus"></i>
-            Add New Patient
-        </a>
-    </div>
-</div>
-
-<!-- Stats Cards -->
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <div class="stat-icon primary">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-trend up">
-                <i class="fas fa-arrow-up"></i>
-                +12%
-            </div>
-        </div>
-        <div class="stat-value">{{ patient_count }}</div>
-        <div class="stat-label">Total Patients</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <div class="stat-icon warning">
-                <i class="fas fa-calendar-check"></i>
-            </div>
-            <div class="stat-trend down">
-                <i class="fas fa-arrow-down"></i>
-                -3%
-            </div>
-        </div>
-        <div class="stat-value">{{ appointment_count }}</div>
-        <div class="stat-label">Appointments Today</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <div class="stat-icon info">
-                <i class="fas fa-clock"></i>
-            </div>
-            <div class="stat-trend up">
-                <i class="fas fa-arrow-up"></i>
-                +15%
-            </div>
-        </div>
-        <div class="stat-value">{{ pending_appointments }}</div>
-        <div class="stat-label">Pending Reviews</div>
-    </div>
-</div>
-
-<!-- Quick Actions -->
-<div class="quick-actions">
-    <a href="#" class="quick-action">
-        <i class="fas fa-user-plus"></i>
-        <div class="quick-action-text">Register Patient</div>
-    </a>
-    <a href="#" class="quick-action">
-        <i class="fas fa-search"></i>
-        <div class="quick-action-text">Search Patients</div>
-    </a>
-    <a href="#" class="quick-action">
-        <i class="fas fa-calendar-alt"></i>
-        <div class="quick-action-text">Schedule Appointment</div>
-    </a>
-    <a href="#" class="quick-action">
-        <i class="fas fa-file-medical"></i>
-        <div class="quick-action-text">Medical Records</div>
-    </a>
-</div>
-
-<!-- FHIR Data Management -->
-<div class="fhir-actions">
-    <div class="fhir-header">
-        <h3 class="fhir-title">
-            <i class="fas fa-exchange-alt"></i>
-            FHIR Data Management
-        </h3>
-        <p class="fhir-subtitle">Manage patient data synchronization with FHIR server</p>
-    </div>
-    <div class="fhir-content">
-        <div class="fhir-buttons">
-            <div class="fhir-button pull" id="pullDataBtn">
-                <i class="fas fa-download fhir-button-icon"></i>
-                <div class="fhir-button-title">Pull Patient Data</div>
-                <div class="fhir-button-description">
-                    Retrieve specific patient information from the HAPI FHIR server using Patient ID or National ID
-                </div>
-                <button class="fhir-button-action" onclick="showQuickSearchModal()">
-                    <i class="fas fa-download"></i>
-                    Pull Data
-                </button>
-            </div>
-            
-            <div class="fhir-button sync" id="syncDataBtn">
-                <i class="fas fa-sync-alt fhir-button-icon"></i>
-                <div class="fhir-button-title">Manual Sync</div>
-                <div class="fhir-button-description">
-                    Manually synchronize patient data between local database and FHIR server
-                </div>
-                <button class="fhir-button-action" onclick="syncPatientData()">
-                    <i class="fas fa-sync-alt"></i>
-                    Start Sync
-                </button>
-            </div>
+    <!-- Dashboard Stylesheet -->
+    <link rel="stylesheet" type="text/css" href="{% static 'Patients/dashboard.css' %}">
+    
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-users"></i>
+            Patient Dashboard
+        </h1>
+        <div class="dashboard-actions">
+            <a href="{% url 'request_patient' %}" class="btn btn-success">
+                <i class="fas fa-download"></i>
+                Pull Patient
+            </a>
+            <a href="{% url 'PatientList' %}" class="btn btn-outline">
+                <i class="fas fa-list"></i>
+                View All Patients
+            </a>
+            <a href="{% url 'add_patient' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i>
+                Add New Patient
+            </a>
         </div>
     </div>
     
-    <!-- Pull Form Section (Alternative to Modal) -->
-    <div class="pull-form-section" id="pullFormSection">
-        <div class="pull-form-header">
-            <h4 class="pull-form-title">Pull Patient Data from HAPI FHIR Server</h4>
-            <p class="pull-form-subtitle">Enter Patient ID or National ID to retrieve patient records</p>
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div class="stat-icon primary">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+            <div class="stat-value">{{ patient_count }}</div>
+            <div class="stat-label">Total Patients</div>
         </div>
-        
-        <form class="pull-form" id="pullDataForm">
-            <div class="form-group">
-                <label class="form-label" for="patientId">Patient ID</label>
-                <input 
-                    type="text" 
-                    id="patientId" 
-                    name="patientId" 
-                    class="form-input" 
-                    placeholder="Enter FHIR Patient ID (e.g., 12345)"
-                >
-                <div class="form-help">The unique identifier for the patient in the FHIR server</div>
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div class="stat-icon warning">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
             </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="nationalId">National ID Number</label>
-                <input 
-                    type="text" 
-                    id="nationalId" 
-                    name="nationalId" 
-                    class="form-input" 
-                    placeholder="Enter National ID (e.g., 1234567890)"
-                >
-                <div class="form-help">The patient's national identification number</div>
+            <div class="stat-value">{{ appointment_count }}</div>
+            <div class="stat-label">Appointments Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div class="stat-icon info">
+                    <i class="fas fa-clock"></i>
+                </div>
             </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="cancelPullForm()">
-                    <i class="fas fa-times"></i>
-                    Cancel
-                </button>
-                <button type="submit" class="btn btn-info" id="pullSubmitBtn">
-                    <i class="fas fa-download"></i>
-                    Pull Patient Data
-                </button>
-            </div>
-        </form>
+            <div class="stat-value">{{ pending_appointments }}</div>
+            <div class="stat-label">Pending Reviews</div>
+        </div>
     </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Animate stats on page load
-        const statValues = document.querySelectorAll('.stat-value');
-        statValues.forEach(stat => {
-            const finalValue = parseInt(stat.textContent.replace(/,/g, ''));
-            animateValue(stat, 0, finalValue, 1000);
-        });
-
-        function animateValue(element, start, end, duration) {
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                const currentValue = Math.floor(progress * (end - start) + start);
-                element.textContent = currentValue.toLocaleString();
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                }
-            };
-            window.requestAnimationFrame(step);
-        }
-
-        // Add click tracking for quick actions
-        const quickActions = document.querySelectorAll('.quick-action');
-        quickActions.forEach(action => {
-            action.addEventListener('click', function(e) {
-                console.log('Quick action clicked:', this.querySelector('.quick-action-text').textContent);
-            });
-        });
-
-        // Handle pull form submission
-        document.getElementById('pullDataForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitPullForm();
-        });
-    });
-
-    // Enhanced Toggle Pull Form Section
-    function togglePullForm() {
-        const formSection = document.getElementById('pullFormSection');
-        const pullBtn = document.getElementById('pullDataBtn');
-        const actionBtn = pullBtn.querySelector('.fhir-button-action');
-        
-        if (formSection.classList.contains('active')) {
-            // Close the form
-            formSection.classList.remove('active');
-            actionBtn.innerHTML = '<i class="fas fa-download"></i> Pull Data';
-            pullBtn.classList.remove('active');
-            
-            // Clear any validation errors
-            clearFormErrors();
-        } else {
-            // Open the form
-            formSection.classList.add('active');
-            pullBtn.classList.add('active');
-            actionBtn.innerHTML = '<i class="fas fa-times"></i> Cancel';
-            
-            // Add slide-down animation
-            formSection.style.maxHeight = '0px';
-            formSection.style.overflow = 'hidden';
-            formSection.style.transition = 'max-height 0.3s ease-out';
-            
-            setTimeout(() => {
-                formSection.style.maxHeight = formSection.scrollHeight + 'px';
-                
-                // Focus on first input after animation
-                setTimeout(() => {
-                    const firstInput = document.getElementById('patientId');
-                    if (firstInput) {
-                        firstInput.focus();
-                        firstInput.select(); // Select any existing text
-                    }
-                }, 100);
-            }, 10);
-            
-            // Show helpful tooltip
-            showTooltip(pullBtn, 'Fill in either Patient ID or National ID to search for a specific patient');
-        }
-    }
-
-    // Quick Search Modal Approach
-    function showQuickSearchModal() {
-        // Create modal overlay
-        const modalOverlay = document.createElement('div');
-        modalOverlay.className = 'modal-overlay';
-        modalOverlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
-        
-        // Create modal content
-        const modalContent = document.createElement('div');
-        modalContent.className = 'modal-content';
-        modalContent.style.cssText = `
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
-            width: 90%;
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
-        `;
-        
-        modalContent.innerHTML = `
-            <div class="modal-header">
-                <h3 style="margin: 0 0 0.5rem 0; color: #1f2937;">
-                    <i class="fas fa-download" style="color: #3b82f6; margin-right: 0.5rem;"></i>
-                    Pull Patient Data
-                </h3>
-                <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">
-                    Enter Patient ID or National ID to retrieve records from FHIR server
-                </p>
-            </div>
-            
-            <div class="modal-body" style="margin: 1.5rem 0;">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
-                        Patient ID
-                    </label>
-                    <input 
-                        type="text" 
-                        id="modalPatientId" 
-                        placeholder="Enter FHIR Patient ID (e.g., 12345)"
-                        style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 1rem; box-sizing: border-box;"
-                    >
-                </div>
-                
-                <div class="form-divider" style="text-align: center; margin: 1rem 0; color: #9ca3af; font-size: 0.8rem;">
-                    OR
-                </div>
-                
-                <div class="form-group">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
-                        National ID
-                    </label>
-                    <input 
-                        type="text" 
-                        id="modalNationalId" 
-                        placeholder="Enter National ID (e.g., 1234567890)"
-                        style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 1rem; box-sizing: border-box;"
-                    >
-                </div>
-            </div>
-            
-            <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-                <button 
-                    type="button" 
-                    onclick="closeQuickSearchModal()" 
-                    style="padding: 0.75rem 1.5rem; border: 2px solid #e5e7eb; background: white; color: #6b7280; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                >
-                    Cancel
-                </button>
-                <button 
-                    type="button" 
-                    onclick="executeQuickPull()" 
-                    id="modalPullBtn"
-                    style="padding: 0.75rem 1.5rem; border: none; background: #3b82f6; color: white; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                >
-                    <i class="fas fa-download"></i> Pull Data
-                </button>
-            </div>
-        `;
-        
-        modalOverlay.appendChild(modalContent);
-        document.body.appendChild(modalOverlay);
-        
-        // Animate in
-        setTimeout(() => {
-            modalOverlay.style.opacity = '1';
-            modalContent.style.transform = 'scale(1)';
-        }, 10);
-        
-        // Focus first input
-        setTimeout(() => {
-            document.getElementById('modalPatientId').focus();
-        }, 300);
-        
-        // Close on overlay click
-        modalOverlay.addEventListener('click', function(e) {
-            if (e.target === modalOverlay) {
-                closeQuickSearchModal();
-            }
-        });
-        
-        // Store reference for cleanup
-        window.currentModal = modalOverlay;
-    }
-
-    function closeQuickSearchModal() {
-        const modal = window.currentModal;
-        if (modal) {
-            modal.style.opacity = '0';
-            modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
-            
-            setTimeout(() => {
-                document.body.removeChild(modal);
-                window.currentModal = null;
-            }, 300);
-        }
-    }
-
-    function executeQuickPull() {
-        const patientId = document.getElementById('modalPatientId').value.trim();
-        const nationalId = document.getElementById('modalNationalId').value.trim();
-        const pullBtn = document.getElementById('modalPullBtn');
-        
-        // Validate
-        if (!patientId && !nationalId) {
-            showNotification('Please enter either Patient ID or National ID', 'error');
-            return;
-        }
-        
-        // Show loading
-        pullBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pulling...';
-        pullBtn.disabled = true;
-        
-        // Make API call
-        const formData = {
-            patient_id: patientId,
-            national_id: nationalId
-        };
-        
-        fetch('/api/fhir/pull-patient/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification(`Patient data pulled successfully! Found: ${data.patient_name || 'Patient'}`, 'success');
-                closeQuickSearchModal();
-                
-                // Optionally redirect or refresh
-                if (data.patient_id) {
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                }
-            } else {
-                showNotification(`Failed to pull patient data: ${data.message || 'Unknown error'}`, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error occurred while pulling patient data', 'error');
-        })
-        .finally(() => {
-            pullBtn.innerHTML = '<i class="fas fa-download"></i> Pull Data';
-            pullBtn.disabled = false;
-        });
-    }
-
-    // Cancel Pull Form
-    function cancelPullForm() {
-        const formSection = document.getElementById('pullFormSection');
-        const pullBtn = document.getElementById('pullDataBtn');
-        const actionBtn = pullBtn.querySelector('.fhir-button-action');
-        
-        formSection.classList.remove('active');
-        actionBtn.innerHTML = '<i class="fas fa-download"></i> Pull Data';
-        
-        // Reset form
-        document.getElementById('pullDataForm').reset();
-    }
-
-    // Submit Pull Form
-    function submitPullForm() {
-        const patientId = document.getElementById('patientId').value.trim();
-        const nationalId = document.getElementById('nationalId').value.trim();
-        const submitBtn = document.getElementById('pullSubmitBtn');
-        
-        // Validate form
-        if (!patientId && !nationalId) {
-            showNotification('Please enter either Patient ID or National ID', 'error');
-            return;
-        }
-        
-        // Add loading state
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pulling...';
-        submitBtn.disabled = true;
-        
-        // Prepare data
-        const formData = {
-            patient_id: patientId,
-            national_id: nationalId
-        };
-        
-        // Make API call to pull specific patient data
-        fetch('/api/fhir/pull-patient/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification(`Patient data pulled successfully! Found: ${data.patient_name || 'Patient'}`, 'success');
-                
-                // Close form and reset
-                cancelPullForm();
-                
-                // Optionally refresh stats or redirect to patient details
-                if (data.patient_id) {
-                    setTimeout(() => {
-                        // You can redirect to patient details page or refresh the dashboard
-                        // window.location.href = `/patients/${data.patient_id}/`;
-                        location.reload();
-                    }, 2000);
-                }
-            } else {
-                showNotification(`Failed to pull patient data: ${data.message || 'Unknown error'}`, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error occurred while pulling patient data', 'error');
-        })
-        .finally(() => {
-            // Remove loading state
-            submitBtn.innerHTML = '<i class="fas fa-download"></i> Pull Patient Data';
-            submitBtn.disabled = false;
-        });
-    }
-
-    function syncPatientData() {
-        const btn = document.getElementById('syncDataBtn');
-        const actionBtn = btn.querySelector('.fhir-button-action');
-        
-        // Add loading state
-        btn.classList.add('loading');
-        actionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
-        actionBtn.disabled = true;
-        
-        // Simulate API call - replace with actual sync endpoint
-        fetch('/api/fhir/sync-patients/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification('Patient data synchronized successfully!', 'success');
-                // Optionally refresh stats
-                location.reload();
-            } else {
-                showNotification('Failed to sync patient data: ' + data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error occurred during synchronization', 'error');
-        })
-        .finally(() => {
-            // Remove loading state
-            btn.classList.remove('loading');
-            actionBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Start Sync';
-            actionBtn.disabled = false;
-        });
-    }
-
-    // Utility Functions
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    function showNotification(message, type) {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            color: white;
-            font-weight: 600;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-        `;
-        
-        if (type === 'success') {
-            notification.style.backgroundColor = '#10B981';
-        } else if (type === 'error') {
-            notification.style.backgroundColor = '#EF4444';
-        }
-        
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        
-        // Animate in
-        setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
-        }, 100);
-        
-        // Remove after 5 seconds
-        setTimeout(() => {
-            notification.style.transform = 'translateX(400px)';
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 300);
-        }, 5000);
-    }
-
-    // Utility functions for enhanced features
-    function clearFormErrors() {
-        const errorMessages = document.querySelectorAll('.form-error');
-        errorMessages.forEach(error => error.remove());
-        
-        const inputsWithErrors = document.querySelectorAll('.form-input.error');
-        inputsWithErrors.forEach(input => input.classList.remove('error'));
-    }
-
-    function showTooltip(element, message) {
-        const tooltip = document.createElement('div');
-        tooltip.className = 'tooltip';
-        tooltip.textContent = message;
-        tooltip.style.cssText = `
-            position: absolute;
-            background: #1f2937;
-            color: white;
-            padding: 0.5rem 0.75rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            z-index: 1001;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            pointer-events: none;
-        `;
-        
-        element.appendChild(tooltip);
-        
-        setTimeout(() => {
-            tooltip.style.opacity = '1';
-        }, 100);
-        
-        setTimeout(() => {
-            tooltip.style.opacity = '0';
-            setTimeout(() => {
-                if (tooltip.parentNode) {
-                    tooltip.parentNode.removeChild(tooltip);
-                }
-            }, 200);
-        }, 3000);
-    }
-</script>
+    
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{% url 'request_patient' %}" class="quick-action">
+            <i class="fas fa-download"></i>
+            <div class="quick-action-text">Pull Patient Data</div>
+        </a>
+        <a href="{% url 'PatientList' %}" class="quick-action">
+            <i class="fas fa-search"></i>
+            <div class="quick-action-text">Search Patients</div>
+        </a>
+        <a href="{% url 'Appointment' %}" class="quick-action">
+            <i class="fas fa-calendar-alt"></i>
+            <div class="quick-action-text">Schedule Appointment</div>
+        </a>
+        <a href="{% url 'MedicalRecord' %}" class="quick-action">
+            <i class="fas fa-file-medical"></i>
+            <div class="quick-action-text">Medical Records</div>
+        </a>
+    </div>
 {% endblock %}

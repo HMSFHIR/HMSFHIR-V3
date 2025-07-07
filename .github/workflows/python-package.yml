@@ -48,11 +48,12 @@ jobs:
       run: |
         echo "CI=true" >> $GITHUB_ENV
         echo "DEBUG=False" >> $GITHUB_ENV
-        echo "SECRET_KEY=test-secret-key-for-github-actions-$(openssl rand -hex 32)" >> $GITHUB_ENV
+        echo "SECRET_KEY=${{ secrets.DJANGO_CRYPTOGRAPHY_KEY }}" >> $GITHUB_ENV
         echo "DATABASE_URL=postgres://postgres:postgres@localhost:5432/test_db" >> $GITHUB_ENV
         echo "STATIC_ROOT=/tmp/static" >> $GITHUB_ENV
         echo "MEDIA_ROOT=/tmp/media" >> $GITHUB_ENV
         echo "ALLOWED_HOSTS=localhost,127.0.0.1" >> $GITHUB_ENV
+
     
     - name: Wait for PostgreSQL to be ready
       run: |

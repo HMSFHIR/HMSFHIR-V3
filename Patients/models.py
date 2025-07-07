@@ -4,21 +4,22 @@ from django.utils import timezone
 from django.conf import settings
 from datetime import date
 import uuid
+from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField, EncryptedEmailField
 
 
 class Patient(models.Model):
     # Core Identity Fields
     patient_id = models.CharField(max_length=100, unique=True, help_text="Internal patient identifier")
     
-    # Name Fields (FHIR supports multiple names, but simplified here)
-    given_name = models.CharField(max_length=100, help_text="First name(s)")
-    family_name = models.CharField(max_length=100, help_text="Last name/surname")
-    middle_name = models.CharField(max_length=100, blank=True, null=True, help_text="Middle name(s)")
-    name_prefix = models.CharField(max_length=20, blank=True, null=True, help_text="Dr., Mr., Mrs., etc.")
-    name_suffix = models.CharField(max_length=20, blank=True, null=True, help_text="Jr., Sr., III, etc.")
+    # Name Fields (FHIR supports multiple names, but simplified here) - ENCRYPTED
+    given_name = EncryptedCharField(max_length=500, help_text="First name(s)")
+    family_name = EncryptedCharField(max_length=500, help_text="Last name/surname")
+    middle_name = EncryptedCharField(max_length=500, blank=True, null=True, help_text="Middle name(s)")
+    name_prefix = EncryptedCharField(max_length=200, blank=True, null=True, help_text="Dr., Mr., Mrs., etc.")
+    name_suffix = EncryptedCharField(max_length=200, blank=True, null=True, help_text="Jr., Sr., III, etc.")
     
-    # Legacy name field for backward compatibility
-    name = models.CharField(max_length=255, blank=True, null=True, help_text="Full name (legacy field)")
+    # Legacy name field for backward compatibility - ENCRYPTED
+    name = EncryptedCharField(max_length=1000, blank=True, null=True, help_text="Full name (legacy field)")
     
     # Core Demographics
     gender = models.CharField(max_length=10, choices=[
@@ -28,29 +29,30 @@ class Patient(models.Model):
         ("unknown", "Unknown")
     ], default="unknown")
     
+    # CHANGED: Removed encryption from date field to prevent database type conflicts
     birth_date = models.DateField(null=True, blank=True, help_text="Date of birth")
     
-    # Identifiers (FHIR supports multiple identifiers)
-    national_id = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="National ID/SSN")
-    medical_record_number = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="MRN")
-    insurance_number = models.CharField(max_length=100, blank=True, null=True, help_text="Insurance ID")
+    # Identifiers (FHIR supports multiple identifiers) - ENCRYPTED
+    national_id = EncryptedCharField(max_length=300, unique=True, null=True, blank=True, help_text="National ID/SSN")
+    medical_record_number = EncryptedCharField(max_length=300, unique=True, null=True, blank=True, help_text="MRN")
+    insurance_number = EncryptedCharField(max_length=500, blank=True, null=True, help_text="Insurance ID")
     
-    # Contact Information
+    # Contact Information - ENCRYPTED
     phone_validator = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
     )
-    primary_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
-    secondary_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
+    primary_phone = EncryptedCharField(validators=[phone_validator], max_length=200, blank=True, null=True)
+    secondary_phone = EncryptedCharField(validators=[phone_validator], max_length=200, blank=True, null=True)
+    email = EncryptedEmailField(max_length=400, blank=True, null=True)
     
-    # Address Information
-    address_line1 = models.CharField(max_length=255, blank=True, null=True, help_text="Street address")
-    address_line2 = models.CharField(max_length=255, blank=True, null=True, help_text="Apartment, suite, etc.")
-    city = models.CharField(max_length=100, blank=True, null=True)
-    state_province = models.CharField(max_length=100, blank=True, null=True)
-    postal_code = models.CharField(max_length=20, blank=True, null=True)
-    country = models.CharField(max_length=100, default="Ghana")
+    # Address Information - ENCRYPTED
+    address_line1 = EncryptedCharField(max_length=1000, blank=True, null=True, help_text="Street address")
+    address_line2 = EncryptedCharField(max_length=1000, blank=True, null=True, help_text="Apartment, suite, etc.")
+    city = EncryptedCharField(max_length=500, blank=True, null=True)
+    state_province = EncryptedCharField(max_length=500, blank=True, null=True)
+    postal_code = EncryptedCharField(max_length=200, blank=True, null=True)
+    country = models.CharField(max_length=100, default="Ghana")  # Country can remain unencrypted for analytics
     
     # Additional Demographics
     marital_status = models.CharField(max_length=20, choices=[
@@ -72,28 +74,29 @@ class Patient(models.Model):
         ("ha", "Hausa")
     ], default="en")
     
-    # Emergency Contact
-    emergency_contact_name = models.CharField(max_length=255, blank=True, null=True)
-    emergency_contact_relationship = models.CharField(max_length=50, blank=True, null=True)
-    emergency_contact_phone = models.CharField(validators=[phone_validator], max_length=17, blank=True, null=True)
+    # Emergency Contact - ENCRYPTED
+    emergency_contact_name = EncryptedCharField(max_length=1000, blank=True, null=True)
+    emergency_contact_relationship = EncryptedCharField(max_length=300, blank=True, null=True)
+    emergency_contact_phone = EncryptedCharField(validators=[phone_validator], max_length=200, blank=True, null=True)
     
-    # Clinical Information
-    blood_type = models.CharField(max_length=5, choices=[
+    # Clinical Information - ENCRYPTED
+    blood_type = EncryptedCharField(max_length=200, choices=[
         ("A+", "A+"), ("A-", "A-"),
         ("B+", "B+"), ("B-", "B-"),
         ("AB+", "AB+"), ("AB-", "AB-"),
         ("O+", "O+"), ("O-", "O-")
     ], blank=True, null=True)
     
-    allergies = models.TextField(blank=True, null=True, help_text="Known allergies (comma-separated)")
+    allergies = EncryptedTextField(blank=True, null=True, help_text="Known allergies (comma-separated)")
     
     # Status Fields
     active = models.BooleanField(default=True, help_text="Whether this patient record is active")
     deceased = models.BooleanField(default=False)
+    # CHANGED: Removed encryption from date field to prevent database type conflicts
     deceased_date = models.DateField(blank=True, null=True)
     
     # Practice Management
-    last_arrived = models.DateField(null=True, blank=True, help_text="Last visit date")
+    last_arrived = models.DateField(null=True, blank=True, help_text="Last visit date")  # Can remain unencrypted for scheduling analytics
     registration_date = models.DateTimeField(default=timezone.now)
     
     # FHIR Integration
@@ -110,37 +113,56 @@ class Patient(models.Model):
         db_table = 'patients'
         ordering = ['family_name', 'given_name']
         indexes = [
-            models.Index(fields=['family_name', 'given_name']),
+            # Date fields can now be indexed since they're not encrypted
             models.Index(fields=['birth_date']),
-            models.Index(fields=['national_id']),
-            models.Index(fields=['medical_record_number']),
-            models.Index(fields=['primary_phone']),
             models.Index(fields=['last_arrived']),
             models.Index(fields=['active']),
+            models.Index(fields=['patient_id']),
         ]
 
     def __str__(self):
         return f"{self.full_name} ({self.patient_id})"
     
+    # Helper method to safely get encrypted field values
+    def get_encrypted_field(self, field_name):
+        """Safely retrieve encrypted field value, handling None cases"""
+        try:
+            value = getattr(self, field_name)
+            # Handle encrypted fields that might return None or empty strings
+            if value is None or (isinstance(value, str) and value.strip() == ''):
+                return None
+            return value
+        except (AttributeError, Exception):
+            return None
+    
     @property
     def full_name(self):
         """Returns the patient's full name"""
         # Use legacy name field if structured name fields aren't available
-        if not self.given_name and not self.family_name and self.name:
-            return self.name
+        legacy_name = self.get_encrypted_field('name')
+        given_name = self.get_encrypted_field('given_name')
+        family_name = self.get_encrypted_field('family_name')
+        
+        if not given_name and not family_name and legacy_name:
+            return legacy_name
             
         name_parts = []
-        if self.name_prefix:
-            name_parts.append(self.name_prefix)
-        if self.given_name:
-            name_parts.append(self.given_name)
-        if self.middle_name:
-            name_parts.append(self.middle_name)
-        if self.family_name:
-            name_parts.append(self.family_name)
-        if self.name_suffix:
-            name_parts.append(self.name_suffix)
-        return " ".join(name_parts)
+        name_prefix = self.get_encrypted_field('name_prefix')
+        middle_name = self.get_encrypted_field('middle_name')
+        name_suffix = self.get_encrypted_field('name_suffix')
+        
+        if name_prefix:
+            name_parts.append(name_prefix)
+        if given_name:
+            name_parts.append(given_name)
+        if middle_name:
+            name_parts.append(middle_name)
+        if family_name:
+            name_parts.append(family_name)
+        if name_suffix:
+            name_parts.append(name_suffix)
+        
+        return " ".join(name_parts) if name_parts else "Unknown Patient"
     
     @property
     def age(self):
@@ -154,23 +176,34 @@ class Patient(models.Model):
     def full_address(self):
         """Returns formatted full address"""
         address_parts = []
-        if self.address_line1:
-            address_parts.append(self.address_line1)
-        if self.address_line2:
-            address_parts.append(self.address_line2)
-        if self.city:
-            address_parts.append(self.city)
-        if self.state_province:
-            address_parts.append(self.state_province)
-        if self.postal_code:
-            address_parts.append(self.postal_code)
+        
+        address_line1 = self.get_encrypted_field('address_line1')
+        address_line2 = self.get_encrypted_field('address_line2')
+        city = self.get_encrypted_field('city')
+        state_province = self.get_encrypted_field('state_province')
+        postal_code = self.get_encrypted_field('postal_code')
+        
+        if address_line1:
+            address_parts.append(address_line1)
+        if address_line2:
+            address_parts.append(address_line2)
+        if city:
+            address_parts.append(city)
+        if state_province:
+            address_parts.append(state_province)
+        if postal_code:
+            address_parts.append(postal_code)
         if self.country:
             address_parts.append(self.country)
+            
         return ", ".join(address_parts)
     
     def get_primary_identifier(self):
         """Returns the primary identifier for FHIR integration"""
-        return self.medical_record_number or self.national_id or self.patient_id
+        mrn = self.get_encrypted_field('medical_record_number')
+        national_id = self.get_encrypted_field('national_id')
+        
+        return mrn or national_id or self.patient_id
     
     def to_fhir_dict(self):
         """Convert patient data to FHIR-compatible dictionary structure (comprehensive)"""
@@ -189,22 +222,40 @@ class Patient(models.Model):
             "active": self.active,
         }
         
-        # Add name information
-        if self.given_name and self.family_name:
-            fhir_data["name"] = [
-                {
-                    "use": "official",
-                    "family": self.family_name,
-                    "given": [self.given_name] + ([self.middle_name] if self.middle_name else []),
-                    "prefix": [self.name_prefix] if self.name_prefix else [],
-                    "suffix": [self.name_suffix] if self.name_suffix else []
-                }
-            ]
-        elif self.name:
+        # Add name information - handle encrypted fields safely
+        given_name = self.get_encrypted_field('given_name')
+        family_name = self.get_encrypted_field('family_name')
+        middle_name = self.get_encrypted_field('middle_name')
+        name_prefix = self.get_encrypted_field('name_prefix')
+        name_suffix = self.get_encrypted_field('name_suffix')
+        legacy_name = self.get_encrypted_field('name')
+        
+        if given_name and family_name:
+            name_data = {
+                "use": "official",
+                "family": family_name,
+                "given": [given_name]
+            }
+            
+            if middle_name:
+                name_data["given"].append(middle_name)
+            if name_prefix:
+                name_data["prefix"] = [name_prefix]
+            if name_suffix:
+                name_data["suffix"] = [name_suffix]
+                
+            fhir_data["name"] = [name_data]
+            
+        elif legacy_name:
             # Handle legacy name field
-            name_parts = self.name.split()
-            family = name_parts[-1] if len(name_parts) > 1 else self.name
-            given = name_parts[:-1] if len(name_parts) > 1 else []
+            name_parts = legacy_name.split()
+            if len(name_parts) > 1:
+                family = name_parts[-1]
+                given = name_parts[:-1]
+            else:
+                family = legacy_name
+                given = [legacy_name]
+                
             fhir_data["name"] = [
                 {
                     "use": "official",
@@ -218,13 +269,14 @@ class Patient(models.Model):
             fhir_data["gender"] = self.gender
         
         # Add national ID as additional identifier
-        if self.national_id:
+        national_id = self.get_encrypted_field('national_id')
+        if national_id:
             national_id_identifier = {
                 "use": "official",
                 "type": {
                     "text": "National ID"
                 },
-                "value": self.national_id,
+                "value": national_id,
                 "system": "http://example.org/national-id"
             }
             if "identifier" not in fhir_data:
@@ -235,32 +287,46 @@ class Patient(models.Model):
         if self.birth_date:
             fhir_data["birthDate"] = self.birth_date.isoformat()
             
-        # Add telecom information
+        # Add telecom information - handle encrypted fields safely
         telecom = []
-        if self.primary_phone:
-            telecom.append({"system": "phone", "value": self.primary_phone, "use": "home"})
-        if self.secondary_phone:
-            telecom.append({"system": "phone", "value": self.secondary_phone, "use": "work"})
-        if self.email:
-            telecom.append({"system": "email", "value": self.email})
+        primary_phone = self.get_encrypted_field('primary_phone')
+        secondary_phone = self.get_encrypted_field('secondary_phone')
+        email = self.get_encrypted_field('email')
+        
+        if primary_phone:
+            telecom.append({"system": "phone", "value": primary_phone, "use": "home"})
+        if secondary_phone:
+            telecom.append({"system": "phone", "value": secondary_phone, "use": "work"})
+        if email:
+            telecom.append({"system": "email", "value": email})
+            
         if telecom:
             fhir_data["telecom"] = telecom
             
-        # Add address information
-        if any([self.address_line1, self.city, self.state_province, self.postal_code]):
+        # Add address information - handle encrypted fields safely
+        address_line1 = self.get_encrypted_field('address_line1')
+        address_line2 = self.get_encrypted_field('address_line2')
+        city = self.get_encrypted_field('city')
+        state_province = self.get_encrypted_field('state_province')
+        postal_code = self.get_encrypted_field('postal_code')
+        
+        if any([address_line1, city, state_province, postal_code]):
             address_data = {
                 "use": "home",
                 "type": "physical"
             }
-            if self.address_line1 or self.address_line2:
-                lines = [line for line in [self.address_line1, self.address_line2] if line]
-                address_data["line"] = lines
-            if self.city:
-                address_data["city"] = self.city
-            if self.state_province:
-                address_data["state"] = self.state_province
-            if self.postal_code:
-                address_data["postalCode"] = self.postal_code
+            
+            if address_line1 or address_line2:
+                lines = [line for line in [address_line1, address_line2] if line]
+                if lines:
+                    address_data["line"] = lines
+                    
+            if city:
+                address_data["city"] = city
+            if state_province:
+                address_data["state"] = state_province
+            if postal_code:
+                address_data["postalCode"] = postal_code
             if self.country:
                 address_data["country"] = self.country
                 
@@ -300,8 +366,12 @@ class Patient(models.Model):
             self.patient_id = f"PAT-{str(uuid.uuid4())[:8].upper()}"
         
         # If legacy name field is provided but structured fields aren't, populate them
-        if self.name and not self.given_name and not self.family_name:
-            name_parts = self.name.strip().split()
+        legacy_name = self.get_encrypted_field('name')
+        given_name = self.get_encrypted_field('given_name')
+        family_name = self.get_encrypted_field('family_name')
+        
+        if legacy_name and not given_name and not family_name:
+            name_parts = legacy_name.strip().split()
             if len(name_parts) >= 2:
                 self.given_name = name_parts[0]
                 self.family_name = name_parts[-1]
@@ -312,7 +382,7 @@ class Patient(models.Model):
                 self.family_name = name_parts[0]  # Use same for both if only one name
         
         # Ensure legacy name field is populated from structured fields
-        if not self.name and (self.given_name or self.family_name):
+        if not legacy_name and (given_name or family_name):
             self.name = self.full_name
         
         super().save(*args, **kwargs)

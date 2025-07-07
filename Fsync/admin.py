@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.contrib import messages
 from .models import FHIRSyncConfig, SyncRule, SyncQueue, SyncLog
-from .services import FHIRSyncService
+from .syncManager import FHIRSyncService
 from .tasks import process_sync_queue_task, full_sync_task
 
 @admin.register(FHIRSyncConfig)

@@ -9,5 +9,5 @@ urlpatterns = [
     path('Practitioners/', include('Practitioner.urls')),
     path('MedicalRecords/', include('MedicalRecords.urls')),
     path('Fsync/', include('Fsync.urls')),
-   # path('Bridge/', include('Bridge.urls')),
+    path('Bridge/', include('Bridge.urls')),
 ]

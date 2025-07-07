@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from Patients.models import Patient
-from Fsync.services import SyncQueueManager
-from Fsync.mappers import PatientMapper
+from Fsync.queueManager import SyncQueueManager
+from Fsync.patientMapper import PatientMapper
 from Fsync.models import SyncRule
 import logging
 

@@ -1,4 +1,3 @@
-version: '3.9'
 services:
   db:
     image: postgres:15
@@ -17,10 +16,14 @@ services:
       - "6379:6379"
 
   web:
+    extra_hosts:
+      - "dockerhost:172.17.0.1"
     build: .
     command: >
       sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+              python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
     volumes:
       - .:/app
     ports:
@@ -30,8 +33,12 @@ services:
       - redis
 
   celery:
+    extra_hosts:
+      - "dockerhost:172.17.0.1"
     build: .
     command: celery -A core worker --loglevel=info
+    env_file:
+      - .env
     volumes:
       - .:/app
     depends_on:
@@ -41,6 +48,8 @@ services:
   celery-beat:
     build: .
     command: celery -A core beat --loglevel=info
+    env_file:
+      - .env
     volumes:
       - .:/app
     depends_on:

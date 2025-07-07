@@ -9,4 +9,6 @@ celerybeat-schedule*
 
 /venv/celerybeat-schedule*
 
+/.env
+
 .env

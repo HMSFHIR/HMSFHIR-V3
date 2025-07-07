@@ -12,8 +12,14 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+from cryptography.fernet import Fernet
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+load_dotenv()
+FIELD_ENCRYPTION_KEY = os.environ.get('DJANGO_CRYPTOGRAPHY_KEY')
+
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.f
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -82,10 +88,11 @@ INSTALLED_APPS = [
     'MedicalRecords.apps.MedicalrecordsConfig',
     'celery',
     'autht',
-    #'Bridge',
+    'django_cryptography',
+    'Bridge',
 ]
 
-"""
+"""'
 CKEDITOR_5_CONFIGS = {
     'default': {
         'toolbar': [
@@ -99,7 +106,7 @@ CKEDITOR_5_CONFIGS = {
 """
 
 # FHIR SERVER BASE URL
-FHIR_SERVER_BASE_URL = "http://localhost:8080/fhir"
+FHIR_SERVER_BASE_URL = "http://172.17.0.1:8080/fhir"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -204,6 +211,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.environ.get('STATIC_ROOT', BASE_DIR / 'staticfiles')
+STATICFILES_DIRS = [
+    BASE_DIR/"static",
+]
 
 # Media files
 MEDIA_URL = '/media/'
