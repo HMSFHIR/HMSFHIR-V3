@@ -4,8 +4,9 @@ from datetime import timedelta
 import logging
 import traceback
 from .models import SyncLog, SyncQueue
-from syncManager import FHIRSyncService
-from  tasksUtils import validate_fhir_data
+from .syncManager import FHIRSyncService
+from  .tasksUtils import validate_fhir_data
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def cleanup_sync_tasks():
     try:
         # Define cleanup thresholds
 
-        cutoff_date = timezone.now() - timedelta(days=30)
+        cutoff_date = timezone.now() - timedelta(seconds=300) # 5 minutes for logs
         
         # Clean up successful sync logs older than 30 days
         # Keep INFO and DEBUG level logs for historical reference
@@ -41,11 +42,7 @@ def cleanup_sync_tasks():
         
         # Clean up successful queue items older than 7 days
         # Successful items don't need long-term retention
-        success_cutoff = timezone.now() - timedelta(days=7)
-        deleted_queue = SyncQueue.objects.filter(
-            status='success',
-            completed_at__lt=success_cutoff
-        ).delete()
+        deleted_queue = SyncQueue.objects.delete()
         
         logger.info(f"Cleanup completed: {deleted_logs[0]} logs, {deleted_queue[0]} queue items")
         return {
@@ -56,6 +53,8 @@ def cleanup_sync_tasks():
         logger.error(f"Cleanup task failed: {e}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         return {'error': str(e)}
+
+
 
 @shared_task
 def sync_single_resource_task(resource_type, resource_id, operation='create'):
@@ -76,7 +75,7 @@ def sync_single_resource_task(resource_type, resource_id, operation='create'):
         dict: Sync result with status and FHIR ID
     """
     try:
-        # Pre-flight check: ensure FHIR server is reachable
+        # ensure FHIR server is reachable
         sync_service = FHIRSyncService()
         if not sync_service.check_server_availability():
             return {'error': 'FHIR server not available'}
