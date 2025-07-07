@@ -13,7 +13,7 @@ urlpatterns = [
     # HTML Dashboard views
     path('', views.admin_dashboard, name='dashboard'),
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
-    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'), 
+    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
     
     # Task management endpoints (for AJAX calls from dashboard)
     path('task/start/', views.start_task, name='start_task'),

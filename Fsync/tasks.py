@@ -331,7 +331,7 @@ def test_fhir_connection_task():
             return {'status': 'success', 'message': 'FHIR server is available'}
         else:
             logger.warning("FHIR server connection failed")
-            return {'status': 'failed', 'message': 'FHIR server is not available'}
+            return {'statsus': 'failed', 'message': 'FHIR server is not available'}
             
     except Exception as e:
         logger.error(f"FHIR connection test failed: {e}")

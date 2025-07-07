@@ -333,7 +333,7 @@
                 <!-- Show medical records for all roles except IT -->
                 {% if user.user_type != 'IT' %}
                 <li>
-                    <a href="{% url 'MedicalRecordView' %}" class="{% if 'medical_records' in request.path %}active{% endif %}">
+                    <a href="{% url 'MedicalRecord' %}" class="{% if 'medical_records' in request.path %}active{% endif %}">
                         <i class="fas fa-file-medical"></i>
                         Medical Records
                     </a>

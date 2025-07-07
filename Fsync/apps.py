@@ -5,11 +5,19 @@ class FSyncConfig(AppConfig):
     name = 'Fsync'
     
     def ready(self):
-        """Setup signals when app is ready"""
+        """Setup sync signals and register Celery tasks"""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Import task modules for Celery registration
+        try:
+            import Fsync.maintenanceUtils
+        except Exception as e:
+            logger.error(f"Failed to import maintenanceUtils: {e}")
+
+        # Setup Django signals
         try:
             from .signals import setup_sync_signals
             setup_sync_signals()
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Failed to setup sync signals: {e}")

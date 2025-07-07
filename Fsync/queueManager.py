@@ -82,9 +82,26 @@ class SyncQueueManager:
             sync_rule=sync_rule
         )
     
+    def queue_observation(observation, operation: str = 'create', priority: int = 100) -> SyncQueue:
+        """Convenience method to queue an Observation resource"""
+        # Find the appropriate sync rule for Observation
+        sync_rule = SyncRule.objects.filter(
+            resource_type='Observation',
+            is_enabled=True
+        ).first()
+        
+        return SyncQueueManager.queue_resource(
+            resource_type='Observation',
+            resource_id=observation.id,
+            source_object=observation,
+            operation=operation,
+            priority=priority,
+            sync_rule=sync_rule
+        )
     
     @staticmethod
     def retry_failed_items(max_retries: int = 3) -> Dict[str, int]:
+        
         from .syncManager import FHIRSyncService
         """Retry failed queue items"""
         failed_items = SyncQueue.objects.filter(

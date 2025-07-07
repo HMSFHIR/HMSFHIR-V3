@@ -164,6 +164,9 @@ class Patient(models.Model):
         
         return " ".join(name_parts) if name_parts else "Unknown Patient"
     
+    def get_full_name(self):
+        return self.full_name
+
     @property
     def age(self):
         """Calculate patient age from birth_date"""
