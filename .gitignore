@@ -8,3 +8,5 @@ db.sqlite3
 celerybeat-schedule*
 
 /venv/celerybeat-schedule*
+
+.env
