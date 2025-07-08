@@ -81,7 +81,7 @@ class SyncQueueManager:
             priority=priority,
             sync_rule=sync_rule
         )
-    
+    @staticmethod
     def queue_observation(observation, operation: str = 'create', priority: int = 100) -> SyncQueue:
         """Convenience method to queue an Observation resource"""
         # Find the appropriate sync rule for Observation

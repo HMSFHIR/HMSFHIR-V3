@@ -19,19 +19,16 @@ logger = logging.getLogger(__name__)
 def cleanup_sync_tasks():
     """
     Clean up old sync logs and completed queue items to prevent database bloat.
-    
     This maintenance task:
     1. Removes successful sync logs older than 30 days
     2. Removes successful queue items older than 7 days
     3. Preserves error logs for troubleshooting
-    
     Returns:
-        dict: Cleanup statistics
+    dict: Cleanup statistics
     """
     try:
         # Define cleanup thresholds
-
-        cutoff_date = timezone.now() - timedelta(seconds=300) # 5 minutes for logs
+        cutoff_date = timezone.now() - timedelta(seconds=300)  # 5 minutes for logs
         
         # Clean up successful sync logs older than 30 days
         # Keep INFO and DEBUG level logs for historical reference
@@ -42,7 +39,11 @@ def cleanup_sync_tasks():
         
         # Clean up successful queue items older than 7 days
         # Successful items don't need long-term retention
-        deleted_queue = SyncQueue.objects.delete()
+        # Use 'created_at' instead of 'timestamp' for SyncQueue model
+        deleted_queue = SyncQueue.objects.filter(
+            created_at__lt=cutoff_date,
+            status='success'  # Only delete successful items
+        ).delete()
         
         logger.info(f"Cleanup completed: {deleted_logs[0]} logs, {deleted_queue[0]} queue items")
         return {
@@ -53,7 +54,6 @@ def cleanup_sync_tasks():
         logger.error(f"Cleanup task failed: {e}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         return {'error': str(e)}
-
 
 
 @shared_task

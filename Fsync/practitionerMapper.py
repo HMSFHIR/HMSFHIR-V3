@@ -1,6 +1,6 @@
 from typing import Dict, Any
 from .mappers import FHIRMapper
-from patientMapper import PatientMapper
+from .mappers import PatientMapper
 
 class PractitionerMapper(FHIRMapper):
     """Map HMS Practitioner to FHIR Practitioner"""

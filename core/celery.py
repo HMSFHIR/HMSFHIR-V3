@@ -20,7 +20,7 @@ app.conf.beat_schedule = {
     },
     'cleanup-old-records': {
         'task': 'Fsync.maintenanceUtils.cleanup_sync_tasks',
-        'schedule': crontab(minute='*/6'),  # Every 6 minutes
+        'schedule': crontab(minute='*/3'),  # Every 3 minutes
     },
 }
 
