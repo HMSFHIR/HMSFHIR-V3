@@ -376,7 +376,7 @@ Appointments
                     </td>
                     <td>
                         <div class="actions-cell">
-                            <a class="btn btn-edit" href="#" title="Edit Appointment">✏️</a>
+                            <a class="btn btn-edit" href="{% url 'EditAppointment' appointment.AppointmentID %}" title="Edit Appointment">✏️</a>
                             <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this appointment?');">
                                 {% csrf_token %}
                                 <button type="submit" name="delete_appointment" value="{{ appointment.id }}" class="btn btn-delete" title="Delete Appointment">🗑️</button>

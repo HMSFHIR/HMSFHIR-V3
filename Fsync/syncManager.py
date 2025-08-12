@@ -11,6 +11,26 @@ logger = logging.getLogger(__name__)
 
 class FHIRSyncService:
     """Core service for FHIR synchronization"""
+    def sync_resource(self, queue_item: 'SyncQueue') -> bool:
+        """
+        Main entry point for syncing a resource.
+        Routes to appropriate sync method based on whether sync rules are configured.
+        """
+        try:
+            # Mark as processing
+            queue_item.mark_processing()
+            
+            # Check if we have a sync rule
+            if queue_item.sync_rule:
+                return self._sync_with_rule(queue_item)
+            else:
+                return self._sync_without_rule(queue_item)
+                
+        except Exception as e:
+            error_msg = f"Sync failed: {str(e)}"
+            queue_item.mark_failed(error_msg)
+            self._log_sync_event(queue_item, 'ERROR', error_msg)
+            return False
     
     def __init__(self, config_name: str = 'default'):
         try:
@@ -119,13 +139,15 @@ class FHIRSyncService:
             logger.info(f"Found existing pending sync for object_id {queue_item.object_id}, "
                        f"marking current item as duplicate")
             
-            queue_item.mark_failed("Duplicate sync request - another sync in progress")
-            self._log_sync_event(
-                queue_item, 
-                'WARNING', 
-                f"Skipped due to existing pending sync (ID: {existing_pending.id})"
+            logger.info(
+                f"Skipped sync for item {queue_item.id} (duplicate of item {existing_pending.id})"
             )
-            
+            self._log_sync_event(
+                queue_item,
+                'INFO',
+                f"Skipped duplicate sync - another sync already in progress for object_id {queue_item.object_id}"
+            )
+
             return False
         
         # No existing successful sync found, proceed with creation
@@ -586,3 +608,5 @@ class FHIRSyncService:
         except Exception as e:
             logger.error(f"Unexpected error checking FHIR server availability: {e}")
             return False
+        
+    

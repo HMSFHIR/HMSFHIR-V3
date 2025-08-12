@@ -63,3 +63,31 @@ def queue_observation_for_deletion(sender, instance, **kwargs):
 
     except Exception as e:
         logger.error(f"Error marking observation for deletion: {e}")
+
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from Fsync.models import SyncQueue
+import json
+
+@receiver(post_save, sender=Observation)
+def queue_observation_sync(sender, instance, created, **kwargs):
+    """Queue observation for FHIR sync after save"""
+    
+    # Check if sync is already queued
+    existing = SyncQueue.objects.filter(
+        resource_type='Observation',
+        object_id=instance.id,
+        status__in=['pending', 'processing']
+    ).exists()
+    
+    if not existing:
+        # Create sync queue entry
+        SyncQueue.objects.create(
+            resource_type='Observation',
+            resource_id=str(instance.id),
+            object_id=instance.id,
+            operation='create' if created else 'update',
+            fhir_data=instance.to_fhir_dict(),
+            priority=50  # Higher priority than patient updates
+        )

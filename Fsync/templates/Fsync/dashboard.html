@@ -1,8 +1,7 @@
 {% extends 'autht/main.html' %}
 {% load static %}
 
-{% block title %}Dashboard - Zendenta{% endblock %}
-
+{% block title %}Logs{% endblock %}
 {% block content %}
 
 <link rel="stylesheet" href="{% static 'Fsync/dash.css' %}">
@@ -11,47 +10,47 @@
 <div class="admin-dashboard">
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="dashboard-main-content">
 
         <!-- Dashboard Content -->
         <div class="dashboard-content">
             <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
+            <div class="dashboard-stats-grid">
+                <div class="dashboard-stat-card">
+                    <div class="dashboard-stat-icon">
                         <i class="fas fa-user-md"></i>
                     </div>
-                    <div class="stat-info">
+                    <div class="dashboard-stat-info">
                         <h3>{{ total_practitioners }}</h3>
                         <p>Total Practitioners</p>
                     </div>
                 </div>
                 
-                <div class="stat-card">
-                    <div class="stat-icon">
+                <div class="dashboard-stat-card">
+                    <div class="dashboard-stat-icon">
                         <i class="fas fa-users"></i>
                     </div>
-                    <div class="stat-info">
+                    <div class="dashboard-stat-info">
                         <h3>{{ total_staff }}</h3>
                         <p>Staff Members</p>
                     </div>
                 </div>
                 
-                <div class="stat-card">
-                    <div class="stat-icon">
+                <div class="dashboard-stat-card">
+                    <div class="dashboard-stat-icon">
                         <i class="fas fa-sync-alt"></i>
                     </div>
-                    <div class="stat-info">
+                    <div class="dashboard-stat-info">
                         <h3>{{ active_syncs }}</h3>
                         <p>Active Syncs</p>
                     </div>
                 </div>
                 
-                <div class="stat-card">
-                    <div class="stat-icon">
+                <div class="dashboard-stat-card">
+                    <div class="dashboard-stat-icon">
                         <i class="fas fa-exclamation-triangle"></i>
                     </div>
-                    <div class="stat-info">
+                    <div class="dashboard-stat-info">
                         <h3>{{ sync_errors }}</h3>
                         <p>Sync Errors</p>
                     </div>
@@ -59,28 +58,28 @@
             </div>
 
             <!-- Content Tabs -->
-            <div class="content-tabs">
-                <div class="tab-nav">
-                    <button class="tab-btn active" data-tab="practitioners">Practitioners</button>
-                    <button class="tab-btn" data-tab="staff">Staff</button>
-                    <button class="tab-btn" data-tab="sync">Sync Status</button>
+            <div class="dashboard-content-tabs">
+                <div class="dashboard-tab-nav">
+                    <button class="dashboard-tab-btn active" data-tab="practitioners">Practitioners</button>
+                    <button class="dashboard-tab-btn" data-tab="staff">Staff</button>
+                    <button class="dashboard-tab-btn" data-tab="sync">Sync Status</button>
                 </div>
 
                 <!-- Practitioners Tab -->
-                <div class="tab-content active" id="practitioners">
-                    <div class="table-header">
+                <div class="dashboard-tab-content active" id="practitioners">
+                    <div class="dashboard-table-header">
                         <h3>Recent Practitioners</h3>
-                        <div class="table-actions">
-                            <button class="btn-filter">
+                        <div class="dashboard-table-actions">
+                            <button class="dashboard-btn-filter">
                                 <i class="fas fa-filter"></i> Filters
                             </button>
-                            <button class="btn-primary">
+                            <button class="dashboard-btn-primary">
                                 <i class="fas fa-plus"></i> Add Practitioner
                             </button>
                         </div>
                     </div>
                     
-                    <div class="data-table">
+                    <div class="dashboard-data-table">
                         <table>
                             <thead>
                                 <tr>
@@ -96,8 +95,8 @@
                                 {% for practitioner in practitioners %}
                                 <tr>
                                     <td>
-                                        <div class="user-cell">
-                                            <img src="{{ practitioner.avatar.url|default:'/static/images/default-avatar.png' }}" alt="{{ practitioner.name }}" class="user-avatar-small">
+                                        <div class="dashboard-user-cell">
+                                            <img src="{{ practitioner.avatar.url|default:'/static/images/default-avatar.png' }}" alt="{{ practitioner.name }}" class="dashboard-user-avatar-small">
                                             <div>
                                                 <strong>{{ practitioner.name }}</strong>
                                                 <small>{{ practitioner.email }}</small>
@@ -106,13 +105,13 @@
                                     </td>
                                     <td>{{ practitioner.specialty }}</td>
                                     <td>
-                                        <span class="status-badge {% if practitioner.is_active %}active{% else %}inactive{% endif %}">
+                                        <span class="dashboard-status-badge {% if practitioner.is_active %}active{% else %}inactive{% endif %}">
                                             {% if practitioner.is_active %}Active{% else %}Inactive{% endif %}
                                         </span>
                                     </td>
                                     <td>{{ practitioner.patient_count }}</td>
                                     <td>
-                                        <div class="rating">
+                                        <div class="dashboard-rating">
                                             {% for i in "12345" %}
                                                 <i class="fas fa-star {% if forloop.counter <= practitioner.rating %}filled{% endif %}"></i>
                                             {% endfor %}
@@ -120,17 +119,17 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-small">
+                                        <button class="dashboard-btn-icon-small">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn-icon-small">
+                                        <button class="dashboard-btn-icon-small">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center">No practitioners found</td>
+                                    <td colspan="6" class="dashboard-text-center">No practitioners found</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -139,20 +138,20 @@
                 </div>
 
                 <!-- Staff Tab -->
-                <div class="tab-content" id="staff">
-                    <div class="table-header">
+                <div class="dashboard-tab-content" id="staff">
+                    <div class="dashboard-table-header">
                         <h3>Staff Members</h3>
-                        <div class="table-actions">
-                            <button class="btn-filter">
+                        <div class="dashboard-table-actions">
+                            <button class="dashboard-btn-filter">
                                 <i class="fas fa-filter"></i> Filters
                             </button>
-                            <button class="btn-primary">
+                            <button class="dashboard-btn-primary">
                                 <i class="fas fa-plus"></i> Add Staff
                             </button>
                         </div>
                     </div>
                     
-                    <div class="data-table">
+                    <div class="dashboard-data-table">
                         <table>
                             <thead>
                                 <tr>
@@ -167,8 +166,8 @@
                                 {% for staff in staff_members %}
                                 <tr>
                                     <td>
-                                        <div class="user-cell">
-                                            <img src="{{ staff.avatar.url|default:'/static/images/default-avatar.png' }}" alt="{{ staff.name }}" class="user-avatar-small">
+                                        <div class="dashboard-user-cell">
+                                            <img src="{{ staff.avatar.url|default:'/static/images/default-avatar.png' }}" alt="{{ staff.name }}" class="dashboard-user-avatar-small">
                                             <div>
                                                 <strong>{{ staff.name }}</strong>
                                                 <small>{{ staff.email }}</small>
@@ -178,22 +177,22 @@
                                     <td>{{ staff.role }}</td>
                                     <td>{{ staff.department }}</td>
                                     <td>
-                                        <span class="status-badge {% if staff.is_active %}active{% else %}inactive{% endif %}">
+                                        <span class="dashboard-status-badge {% if staff.is_active %}active{% else %}inactive{% endif %}">
                                             {% if staff.is_active %}Active{% else %}Inactive{% endif %}
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="btn-icon-small">
+                                        <button class="dashboard-btn-icon-small">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn-icon-small">
+                                        <button class="dashboard-btn-icon-small">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" class="text-center">No staff members found</td>
+                                    <td colspan="5" class="dashboard-text-center">No staff members found</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -202,20 +201,20 @@
                 </div>
 
                 <!-- Sync Status Tab -->
-                <div class="tab-content" id="sync">
-                    <div class="table-header">
+                <div class="dashboard-tab-content" id="sync">
+                    <div class="dashboard-table-header">
                         <h3>FHIR Sync Status</h3>
-                        <div class="table-actions">
-                            <button class="btn-filter">
+                        <div class="dashboard-table-actions">
+                            <button class="dashboard-btn-filter">
                                 <i class="fas fa-filter"></i> Filters
                             </button>
-                            <button class="btn-primary" onclick="refreshSync()">
+                            <button class="dashboard-btn-primary" onclick="refreshSync()">
                                 <i class="fas fa-sync-alt"></i> Refresh
                             </button>
                         </div>
                     </div>
                     
-                    <div class="data-table">
+                    <div class="dashboard-data-table">
                         <table>
                             <thead>
                                 <tr>
@@ -232,23 +231,23 @@
                                     <td>{{ sync.resource_type }}</td>
                                     <td>{{ sync.last_sync|date:"M d, Y H:i" }}</td>
                                     <td>
-                                        <span class="status-badge {% if sync.status == 'success' %}success{% elif sync.status == 'error' %}error{% else %}warning{% endif %}">
+                                        <span class="dashboard-status-badge {% if sync.status == 'success' %}success{% elif sync.status == 'error' %}error{% else %}warning{% endif %}">
                                             {{ sync.status|title }}
                                         </span>
                                     </td>
                                     <td>{{ sync.record_count }}</td>
                                     <td>
-                                        <button class="btn-icon-small" onclick="syncResource('{{ sync.resource_type }}')">
+                                        <button class="dashboard-btn-icon-small" onclick="syncResource('{{ sync.resource_type }}')">
                                             <i class="fas fa-sync-alt"></i>
                                         </button>
-                                        <button class="btn-icon-small">
+                                        <button class="dashboard-btn-icon-small">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" class="text-center">No sync data available</td>
+                                    <td colspan="5" class="dashboard-text-center">No sync data available</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -262,13 +261,13 @@
 
 <script>
 // Tab switching functionality
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.dashboard-tab-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         const tabId = this.dataset.tab;
         
         // Remove active class from all tabs and contents
-        document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.dashboard-tab-btn').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.dashboard-tab-content').forEach(c => c.classList.remove('active'));
         
         // Add active class to clicked tab and corresponding content
         this.classList.add('active');

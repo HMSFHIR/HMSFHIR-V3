@@ -234,30 +234,147 @@ class ObservationMapper(FHIRMapper):
     @classmethod
     def to_fhir(cls, observation) -> Dict[str, Any]:
         """Convert Observation model to FHIR Observation resource"""
-        return {
-            "resourceType": "Observation",
-            "id": str(observation.id),
-            "status": getattr(observation, 'status', 'final'),
-            "subject": {
-                "reference": f"Patient/{observation.patient.patient_id}"
-            } if hasattr(observation, 'patient') and observation.patient else None,
-            "effectiveDateTime": cls.format_datetime(getattr(observation, 'effective_date_time', None)),
-            "code": {
+        
+        # Use model's to_fhir_dict if available
+        if hasattr(observation, 'to_fhir_dict'):
+            fhir_data = observation.to_fhir_dict()
+        else:
+            # Manual mapping as fallback
+            fhir_data = {
+                "resourceType": "Observation",
+                "id": str(observation.id),
+                "status": "final",  # Default to final
+            }
+        
+        # Ensure required fields are present
+        
+        # Add category (required by many FHIR servers)
+        if "category" not in fhir_data:
+            fhir_data["category"] = [{
                 "coding": [{
-                    "system": getattr(observation, 'code_system', None),
-                    "code": getattr(observation, 'code', None),
-                    "display": getattr(observation, 'code_display', None)
+                    "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                    "code": "vital-signs",
+                    "display": "Vital Signs"
                 }]
-            },
-            "valueString": str(getattr(observation, 'value', ''))
+            }]
+        
+        # Ensure subject reference
+        if hasattr(observation, 'patient') and observation.patient:
+            if "subject" not in fhir_data or not fhir_data["subject"]:
+                fhir_data["subject"] = {
+                    "reference": f"Patient/{observation.patient.patient_id}"
+                }
+        
+        # Ensure encounter reference if available
+        if hasattr(observation, 'encounter') and observation.encounter:
+            if "encounter" not in fhir_data or not fhir_data["encounter"]:
+                fhir_data["encounter"] = {
+                    "reference": f"Encounter/{observation.encounter.id}"
+                }
+        
+        # Handle observation time (map from observation_time to effectiveDateTime)
+        if hasattr(observation, 'observation_time') and observation.observation_time:
+            fhir_data["effectiveDateTime"] = cls.format_datetime(observation.observation_time)
+        elif "effectiveDateTime" not in fhir_data:
+            # Use current time as fallback
+            fhir_data["effectiveDateTime"] = cls.format_datetime(timezone.now())
+        
+        # Handle code
+        if hasattr(observation, 'code') and observation.code:
+            if "code" not in fhir_data or not fhir_data["code"]:
+                fhir_data["code"] = {
+                    "coding": [{
+                        "system": "http://loinc.org",  # Default to LOINC
+                        "code": observation.code,
+                        "display": observation.code
+                    }],
+                    "text": observation.code
+                }
+        
+        # Handle value and unit
+        if hasattr(observation, 'value') and hasattr(observation, 'unit'):
+            # Try to parse as numeric for valueQuantity
+            try:
+                numeric_value = float(observation.value)
+                fhir_data["valueQuantity"] = {
+                    "value": numeric_value,
+                    "unit": observation.unit or "",
+                    "system": "http://unitsofmeasure.org",
+                    "code": observation.unit or ""
+                }
+                # Remove valueString if it exists
+                fhir_data.pop("valueString", None)
+            except (ValueError, TypeError):
+                # Fall back to string value if not numeric
+                fhir_data["valueString"] = str(observation.value)
+                fhir_data.pop("valueQuantity", None)
+        elif hasattr(observation, 'value'):
+            fhir_data["valueString"] = str(observation.value)
+        
+        return fhir_data
+    
+class ConditionMapper(FHIRMapper):
+    """Mapper for Condition resources"""
+
+    @classmethod
+    def to_fhir(cls, condition) -> Dict[str, Any]:
+        """Convert Condition model to FHIR Condition resource"""
+        
+        # Use model's to_fhir_dict if available
+        if hasattr(condition, 'to_fhir_dict'):
+            return condition.to_fhir_dict()
+        
+        # Manual mapping
+        fhir_data = {
+            "resourceType": "Condition",
+            "id": str(condition.id),
         }
-
-
+        
+        # Clinical status (required)
+        status = getattr(condition, 'status', 'active')
+        fhir_data["clinicalStatus"] = {
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": status.lower() if status.lower() in ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'] else 'active'
+            }]
+        }
+        
+        # Subject (required)
+        if hasattr(condition, 'patient') and condition.patient:
+            fhir_data["subject"] = {
+                "reference": f"Patient/{condition.patient.patient_id}"
+            }
+        
+        # Code
+        if hasattr(condition, 'code') and condition.code:
+            fhir_data["code"] = {
+                "coding": [{
+                    "system": "http://snomed.info/sct",  # Default to SNOMED
+                    "code": condition.code,
+                    "display": getattr(condition, 'description', condition.code)
+                }],
+                "text": getattr(condition, 'description', condition.code)
+            }
+        
+        # Encounter
+        if hasattr(condition, 'encounter') and condition.encounter:
+            fhir_data["encounter"] = {
+                "reference": f"Encounter/{condition.encounter.id}"
+            }
+        
+        # Onset date
+        if hasattr(condition, 'onset_date') and condition.onset_date:
+            fhir_data["onsetDateTime"] = cls.format_date(condition.onset_date) + "T00:00:00Z"
+        
+        return fhir_data
+    
+    
 # Registry of mappers
 FHIR_MAPPERS = {
     'Patient': PatientMapper,
     'Encounter': EncounterMapper,
     'Observation': ObservationMapper,
+    'Condition': ConditionMapper, #need to implement ConditionMapper
 }
 
 
