@@ -1,5 +1,3 @@
-# tasks.py - Complete Celery Tasks with Encryption Support
-# ============================================================================
 """
 This module contains Celery tasks for synchronizing healthcare data from a Hospital
 Management System (HMS) to a FHIR (Fast Healthcare Interoperability Resources) server.
@@ -231,7 +229,6 @@ def retry_failed_syncs_task():
         logger.error(f"Traceback: {traceback.format_exc()}")
         return {'error': str(e)}
 
-#
 # ============================================================================
 # PATIENT-SPECIFIC TASKS
 # ============================================================================
@@ -402,4 +399,160 @@ def validate_patient_data_task(patient_id=None, limit=10):
         
     except Exception as e:
         logger.error(f"Patient data validation failed: {e}")
+        return {'error': str(e)}
+    
+
+
+# ============================================================================
+# OBSERVATION SYNC TASKS
+# ============================================================================
+
+@shared_task
+def sync_pending_observations():
+    """Sync all pending observations to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        # Get pending observation syncs
+        pending_observations = SyncQueue.objects.filter(
+            resource_type='Observation',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]  # Process 50 at a time
+        
+        results = {'success': 0, 'failed': 0}
+        
+        for queue_item in pending_observations:
+            try:
+                # Check if encounter needs to be removed from FHIR data
+                if 'encounter' in queue_item.fhir_data:
+                    # Verify encounter is synced
+                    from MedicalRecords.models import Observation
+                    obs = Observation.objects.get(id=queue_item.object_id)
+                    
+                    if hasattr(obs, 'encounter') and obs.encounter:
+                        encounter_sync = SyncQueue.objects.filter(
+                            resource_type='Encounter',
+                            object_id=obs.encounter.id,
+                            status='success'
+                        ).first()
+                        
+                        if not encounter_sync:
+                            # Remove encounter reference if not synced
+                            queue_item.fhir_data.pop('encounter', None)
+                            queue_item.save()
+                            logger.info(f"Removed unsynced encounter reference from observation {queue_item.object_id}")
+                
+                # Sync the observation
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced observation {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync observation {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing observation {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Observation sync completed: {results['success']} success, {results['failed']} failed")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Observation sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def queue_new_observations():
+    """Queue any observations that aren't in the sync queue yet"""
+    try:
+        from MedicalRecords.models import Observation
+        
+        # Get observations not in sync queue
+        synced_obs_ids = SyncQueue.objects.filter(
+            resource_type='Observation'
+        ).values_list('object_id', flat=True)
+        
+        unsynced_observations = Observation.objects.exclude(
+            id__in=synced_obs_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        
+        for obs in unsynced_observations:
+            try:
+                # Build FHIR data
+                fhir_data = {
+                    "resourceType": "Observation",
+                    "status": "final",
+                    "code": {"text": obs.code},
+                    "subject": {"reference": f"Patient/{obs.patient.patient_id}"},
+                }
+                
+                if obs.observation_time:
+                    fhir_data["effectiveDateTime"] = obs.observation_time.isoformat()
+                
+                # Add value
+                try:
+                    fhir_data["valueQuantity"] = {
+                        "value": float(obs.value),
+                        "unit": getattr(obs, 'unit', '')
+                    }
+                except:
+                    fhir_data["valueString"] = str(obs.value)
+                
+                # Don't add encounter reference unless it's synced
+                if hasattr(obs, 'encounter') and obs.encounter:
+                    encounter_sync = SyncQueue.objects.filter(
+                        resource_type='Encounter',
+                        object_id=obs.encounter.id,
+                        status='success'
+                    ).first()
+                    
+                    if encounter_sync and encounter_sync.fhir_id:
+                        fhir_data["encounter"] = {"reference": f"Encounter/{encounter_sync.fhir_id}"}
+                
+                # Create queue item
+                SyncQueue.objects.create(
+                    resource_type='Observation',
+                    resource_id=str(obs.id),
+                    object_id=obs.id,
+                    operation='create',
+                    fhir_data=fhir_data,
+                    status='pending',
+                    priority=50
+                )
+                queued_count += 1
+                
+            except Exception as e:
+                logger.error(f"Failed to queue observation {obs.id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new observations for sync")
+        return {'queued': queued_count}
+        
+    except Exception as e:
+        logger.error(f"Queue observations task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_observation_sync_queue():
+    """Combined task to queue and sync observations"""
+    try:
+        # First queue any new observations
+        queue_result = queue_new_observations()
+        logger.info(f"Queue result: {queue_result}")
+        
+        # Then sync pending observations
+        sync_result = sync_pending_observations()
+        logger.info(f"Sync result: {sync_result}")
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0)
+        }
+    except Exception as e:
+        logger.error(f"Process observation sync queue failed: {e}")
         return {'error': str(e)}

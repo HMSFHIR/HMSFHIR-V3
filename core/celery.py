@@ -22,6 +22,22 @@ app.conf.beat_schedule = {
         'task': 'Fsync.maintenanceUtils.cleanup_sync_tasks',
         'schedule': crontab(minute='*/3'),  # Every 3 minutes
     },
+     'sync-observations': {
+        'task': 'Fsync.tasks.process_observation_sync_queue',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+    },
+    
+    # Queue new observations every hour
+    'queue-new-observations': {
+        'task': 'Fsync.tasks.queue_new_observations',
+        'schedule': crontab(minute=0),  # Every hour at minute 0
+    },
+    
+    # Sync pending observations every 10 minutes
+    'sync-pending-observations': {
+        'task': 'Fsync.tasks.sync_pending_observations',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+    },
 }
 
 app.autodiscover_tasks()
