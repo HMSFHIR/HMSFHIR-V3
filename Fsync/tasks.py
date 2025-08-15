@@ -1279,3 +1279,340 @@ def queue_appointment_patients():
     except Exception as e:
         logger.error(f"Update appointment sync failed for {appointment_id}: {e}")
         return {'status': 'error', 'message': str(e)}
+    
+
+# ============================================================================
+# ALLERGY INTOLERANCE SYNC TASKS
+# ============================================================================
+
+@shared_task
+def queue_new_allergy_intolerances():
+    """Queue any allergy intolerances that aren't in the sync queue yet"""
+    try:
+        from MedicalRecords.models import AllergyIntolerance
+        
+        # Get allergy intolerances not in sync queue
+        synced_allergy_ids = SyncQueue.objects.filter(
+            resource_type='AllergyIntolerance'
+        ).values_list('object_id', flat=True).distinct()
+        
+        unsynced_allergies = AllergyIntolerance.objects.exclude(
+            id__in=synced_allergy_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        skipped_count = 0
+        
+        for allergy in unsynced_allergies:
+            try:
+                # Double-check for existing queue items
+                existing_item = SyncQueue.objects.filter(
+                    resource_type='AllergyIntolerance',
+                    object_id=allergy.id
+                ).first()
+                
+                if existing_item:
+                    logger.info(f"Skipping allergy {allergy.id} - already in queue")
+                    skipped_count += 1
+                    continue
+                
+                # Use the model's to_fhir_dict method
+                fhir_data = allergy.to_fhir_dict()
+                
+                # FIXED: Use patient_id directly (no dependency check)
+                fhir_data["patient"] = {
+                    "reference": f"Patient/{allergy.patient.patient_id}"
+                }
+                
+                # Create queue item
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='AllergyIntolerance',
+                    object_id=allergy.id,
+                    defaults={
+                        'resource_id': str(allergy.id),
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 35  # Medium priority
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued allergy intolerance {allergy.id} for sync")
+                else:
+                    skipped_count += 1
+                    logger.info(f"Allergy intolerance {allergy.id} already queued")
+                
+            except Exception as e:
+                logger.error(f"Failed to queue allergy {allergy.id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new allergy intolerances, skipped {skipped_count}")
+        return {'queued': queued_count, 'skipped': skipped_count}
+        
+    except Exception as e:
+        logger.error(f"Queue allergy intolerances task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def sync_pending_allergy_intolerances():
+    """Sync all pending allergy intolerances to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        # Get pending allergy intolerance syncs
+        pending_allergies = SyncQueue.objects.filter(
+            resource_type='AllergyIntolerance',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]  # Process 50 at a time
+        
+        results = {'success': 0, 'failed': 0, 'skipped': 0}
+        
+        for queue_item in pending_allergies:
+            try:
+                # Check for duplicates before processing
+                duplicate_processing = SyncQueue.objects.filter(
+                    resource_type='AllergyIntolerance',
+                    object_id=queue_item.object_id,
+                    status='processing'
+                ).exclude(id=queue_item.id).exists()
+                
+                if duplicate_processing:
+                    logger.info(f"Skipping allergy {queue_item.object_id} - another item is already processing")
+                    results['skipped'] += 1
+                    continue
+                
+                # FIXED: Validate allergy still exists and update patient reference
+                try:
+                    from MedicalRecords.models import AllergyIntolerance
+                    allergy = AllergyIntolerance.objects.get(id=queue_item.object_id)
+                    
+                    # Update patient reference to current patient_id (in case it changed)
+                    if 'patient' in queue_item.fhir_data:
+                        queue_item.fhir_data['patient']['reference'] = f"Patient/{allergy.patient.patient_id}"
+                        queue_item.save()
+                    
+                except AllergyIntolerance.DoesNotExist:
+                    queue_item.mark_failed("Allergy intolerance no longer exists")
+                    results['failed'] += 1
+                    continue
+                
+                # REMOVED: Patient sync validation - let FHIR server handle patient references
+                # This allows us to use patient_id references like appointments
+                
+                # Sync the allergy intolerance
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced allergy intolerance {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync allergy intolerance {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing allergy intolerance {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Allergy intolerance sync completed: {results['success']} success, {results['failed']} failed, {results['skipped']} skipped")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Allergy intolerance sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_allergy_intolerance_sync_queue():
+    """Combined task to queue and sync allergy intolerances"""
+    try:
+        # First queue any new allergy intolerances
+        queue_result = queue_new_allergy_intolerances()
+        logger.info(f"Queue result: {queue_result}")
+        
+        # Then sync pending allergy intolerances
+        sync_result = sync_pending_allergy_intolerances()
+        logger.info(f"Sync result: {sync_result}")
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0),
+            'skipped': (queue_result.get('skipped', 0) + sync_result.get('skipped', 0))
+        }
+    except Exception as e:
+        logger.error(f"Process allergy intolerance sync queue failed: {e}")
+        return {'error': str(e)}
+
+# ============================================================================
+# ENCOUNTER SYNC TASKS (Foundation for other resources)
+# ============================================================================
+
+@shared_task
+def queue_new_encounters():
+    """Queue any encounters that aren't in the sync queue yet"""
+    try:
+        from MedicalRecords.models import Encounter
+        
+        # Get encounters not in sync queue
+        synced_encounter_ids = SyncQueue.objects.filter(
+            resource_type='Encounter'
+        ).values_list('object_id', flat=True).distinct()
+        
+        unsynced_encounters = Encounter.objects.exclude(
+            id__in=synced_encounter_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        skipped_count = 0
+        
+        for encounter in unsynced_encounters:
+            try:
+                # Double-check for existing queue items
+                existing_item = SyncQueue.objects.filter(
+                    resource_type='Encounter',
+                    object_id=encounter.id
+                ).first()
+                
+                if existing_item:
+                    skipped_count += 1
+                    continue
+                
+                # Check if patient is synced
+                patient_sync = SyncQueue.objects.filter(
+                    resource_type='Patient',
+                    object_id=encounter.patient.id,
+                    status='success'
+                ).first()
+                
+                if not patient_sync or not patient_sync.fhir_id:
+                    logger.warning(f"Skipping encounter {encounter.id} - patient {encounter.patient.id} not synced yet")
+                    skipped_count += 1
+                    continue
+                
+                # Use the model's to_fhir_dict method
+                fhir_data = encounter.to_fhir_dict()
+                
+                # Update patient reference to use FHIR ID
+                fhir_data["subject"] = {
+                    "reference": f"Patient/{patient_sync.fhir_id}"
+                }
+                
+                # Create queue item
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='Encounter',
+                    object_id=encounter.id,
+                    defaults={
+                        'resource_id': str(encounter.id),
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 25  # Higher priority (foundation for others)
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued encounter {encounter.id} for sync")
+                else:
+                    skipped_count += 1
+                
+            except Exception as e:
+                logger.error(f"Failed to queue encounter {encounter.id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new encounters, skipped {skipped_count}")
+        return {'queued': queued_count, 'skipped': skipped_count}
+        
+    except Exception as e:
+        logger.error(f"Queue encounters task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def sync_pending_encounters():
+    """Sync all pending encounters to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        pending_encounters = SyncQueue.objects.filter(
+            resource_type='Encounter',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]
+        
+        results = {'success': 0, 'failed': 0, 'skipped': 0}
+        
+        for queue_item in pending_encounters:
+            try:
+                # Check for duplicates
+                duplicate_processing = SyncQueue.objects.filter(
+                    resource_type='Encounter',
+                    object_id=queue_item.object_id,
+                    status='processing'
+                ).exclude(id=queue_item.id).exists()
+                
+                if duplicate_processing:
+                    results['skipped'] += 1
+                    continue
+                
+                # Validate encounter and patient
+                try:
+                    from MedicalRecords.models import Encounter
+                    encounter = Encounter.objects.get(id=queue_item.object_id)
+                    
+                    patient_sync = SyncQueue.objects.filter(
+                        resource_type='Patient',
+                        object_id=encounter.patient.id,
+                        status='success'
+                    ).first()
+                    
+                    if not patient_sync or not patient_sync.fhir_id:
+                        queue_item.mark_failed("Patient not synced - cannot sync encounter")
+                        results['failed'] += 1
+                        continue
+                    
+                    # Update patient reference
+                    queue_item.fhir_data['subject']['reference'] = f"Patient/{patient_sync.fhir_id}"
+                    queue_item.save()
+                    
+                except Encounter.DoesNotExist:
+                    queue_item.mark_failed("Encounter no longer exists")
+                    results['failed'] += 1
+                    continue
+                
+                # Sync the encounter
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced encounter {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync encounter {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing encounter {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Encounter sync completed: {results}")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Encounter sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_encounter_sync_queue():
+    """Combined task to queue and sync encounters"""
+    try:
+        queue_result = queue_new_encounters()
+        sync_result = sync_pending_encounters()
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0),
+            'skipped': (queue_result.get('skipped', 0) + sync_result.get('skipped', 0))
+        }
+    except Exception as e:
+        logger.error(f"Process encounter sync queue failed: {e}")
+        return {'error': str(e)}
