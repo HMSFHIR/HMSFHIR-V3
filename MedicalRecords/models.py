@@ -29,28 +29,85 @@ class Encounter(models.Model):
 
 class Observation(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE)  # ForeignKey to Encounter
+    encounter = models.ForeignKey('Encounter', on_delete=models.CASCADE, null=True, blank=True)
     code = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
-    unit = models.CharField(max_length=100)
+    unit = models.CharField(max_length=100, blank=True, null=True)
     observation_time = models.DateTimeField()
     
+    # Add these fields for better FHIR compatibility
+    status = models.CharField(max_length=20, default='final', choices=[
+        ('registered', 'Registered'),
+        ('preliminary', 'Preliminary'),
+        ('final', 'Final'),
+        ('amended', 'Amended'),
+        ('corrected', 'Corrected'),
+        ('cancelled', 'Cancelled'),
+        ('entered-in-error', 'Entered in Error'),
+    ])
+    
+    # Add FHIR sync tracking
+    fhir_id = models.CharField(max_length=100, blank=True, null=True)
+    last_sync = models.DateTimeField(blank=True, null=True)
+    
     def __str__(self):
-        return f"Observation for {self.patient} during {self.encounter}"
+        return f"Observation for {self.patient} - {self.code}"
     
     def to_fhir_dict(self):
-        return {
+        """Convert to FHIR Observation resource"""
+        fhir_data = {
             "resourceType": "Observation",
-            "status": "final",
-            "code": {"text": self.code},
-            "subject": {"reference": f"Patient/{self.patient.patient_id}"},
-            "encounter": {"reference": f"Encounter/{self.encounter.id}"},
-            "effectiveDateTime": self.observation_time.isoformat(),
-            "valueQuantity": {
-                "value": self.value,
-                "unit": self.unit
-            }
+            "status": self.status,
+            
+            # Add required category field
+            "category": [{
+                "coding": [{
+                    "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                    "code": "vital-signs",
+                    "display": "Vital Signs"
+                }]
+            }],
+            
+            # Code with proper LOINC system
+            "code": {
+                "coding": [{
+                    "system": "http://loinc.org",
+                    "code": self.code,
+                    "display": self.code
+                }],
+                "text": self.code
+            },
+            
+            # Subject reference (required)
+            "subject": {
+                "reference": f"Patient/{self.patient.patient_id}"
+            },
+            
+            # Effective date time
+            "effectiveDateTime": self.observation_time.isoformat()
         }
+        
+        # Add encounter reference if available
+        if self.encounter:
+            fhir_data["encounter"] = {
+                "reference": f"Encounter/{self.encounter.id}"
+            }
+        
+        # Handle value based on whether it's numeric or not
+        try:
+            numeric_value = float(self.value)
+            fhir_data["valueQuantity"] = {
+                "value": numeric_value,
+                "unit": self.unit or "",
+                "system": "http://unitsofmeasure.org",
+                "code": self.unit or ""
+            }
+        except (ValueError, TypeError):
+            # Use string value if not numeric
+            fhir_data["valueString"] = str(self.value)
+        
+        return fhir_data
+
 
 class Condition(models.Model):
     encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="medical_conditions")

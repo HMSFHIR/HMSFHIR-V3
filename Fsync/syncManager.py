@@ -1,4 +1,3 @@
-
 import requests
 import logging
 from Fsync.models import SyncLog
@@ -12,6 +11,26 @@ logger = logging.getLogger(__name__)
 
 class FHIRSyncService:
     """Core service for FHIR synchronization"""
+    def sync_resource(self, queue_item: 'SyncQueue') -> bool:
+        """
+        Main entry point for syncing a resource.
+        Routes to appropriate sync method based on whether sync rules are configured.
+        """
+        try:
+            # Mark as processing
+            queue_item.mark_processing()
+            
+            # Check if we have a sync rule
+            if queue_item.sync_rule:
+                return self._sync_with_rule(queue_item)
+            else:
+                return self._sync_without_rule(queue_item)
+                
+        except Exception as e:
+            error_msg = f"Sync failed: {str(e)}"
+            queue_item.mark_failed(error_msg)
+            self._log_sync_event(queue_item, 'ERROR', error_msg)
+            return False
     
     def __init__(self, config_name: str = 'default'):
         try:
@@ -76,24 +95,145 @@ class FHIRSyncService:
                 'status': f'Connection error: {str(e)}'
             }
     
-    def sync_resource(self, queue_item: SyncQueue) -> bool:
-        """Sync a single resource to FHIR server"""
-        queue_item.mark_processing()
+    def _create_resource(self, queue_item: SyncQueue, fhir_data: Dict) -> bool:
+        """Create new FHIR resource or update existing queue items if resource already exists"""
+        
+        # First check if there's already a successful sync for this object
+        existing_success = SyncQueue.objects.filter(
+            object_id=queue_item.object_id,
+            resource_type=queue_item.resource_type,
+            status='success'
+        ).exclude(id=queue_item.id).first()
+        
+        if existing_success:
+            # Found existing successful sync - mark this item as success with same FHIR ID
+            logger.info(f"Found existing successful sync for object_id {queue_item.object_id}, "
+                       f"FHIR ID: {existing_success.fhir_id}")
+            
+            queue_item.mark_success(
+                fhir_id=existing_success.fhir_id,
+                response_data=existing_success.response_data
+            )
+            
+            # Update source object with existing FHIR ID if it's a Patient
+            if queue_item.source_object and queue_item.resource_type == 'Patient':
+                self._update_source_object_fhir_id(queue_item.source_object, existing_success.fhir_id)
+            
+            self._log_sync_event(
+                queue_item, 
+                'INFO', 
+                f"Marked as success using existing FHIR resource: {existing_success.fhir_id}"
+            )
+            
+            return True
+        
+        # Check if there's a pending/processing item for the same object
+        existing_pending = SyncQueue.objects.filter(
+            object_id=queue_item.object_id,
+            resource_type=queue_item.resource_type,
+            status__in=['pending', 'processing']
+        ).exclude(id=queue_item.id).first()
+        
+        if existing_pending:
+            # FIXED: Instead of returning False and leaving stuck in processing,
+            # properly mark this item as skipped/duplicate
+            logger.info(f"Found existing pending sync for object_id {queue_item.object_id}, "
+                       f"marking current item as duplicate")
+            
+            # Mark as failed with a clear message about being a duplicate
+            queue_item.mark_failed(
+                f"Duplicate sync item - object_id {queue_item.object_id} already being processed by item {existing_pending.id}"
+            )
+            
+            self._log_sync_event(
+                queue_item,
+                'INFO',
+                f"Skipped duplicate sync - another sync already in progress for object_id {queue_item.object_id}"
+            )
+
+            return False  # This is OK now because item is properly marked as failed
+        
+        # No existing successful sync found, proceed with creation
+        url = f"{self.base_url}/{queue_item.resource_type}"
         
         try:
-            # Apply field mappings and transformations if sync rule is available
-            if queue_item.sync_rule:
-                success = self._sync_with_rule(queue_item)
+            response = self.session.post(
+                url, 
+                json=fhir_data, 
+                timeout=getattr(self.config, 'timeout', 30)
+            )
+            
+            if response.status_code in [200, 201]:
+                response_data = response.json()
+                fhir_id = response_data.get('id')
+                
+                if not fhir_id:
+                    # FHIR server didn't return an ID - this is an error
+                    error_msg = "FHIR server response missing 'id' field"
+                    queue_item.mark_failed(error_msg, response_data=response_data)
+                    self._log_sync_event(queue_item, 'ERROR', error_msg)
+                    return False
+                
+                # Mark current item as success
+                queue_item.mark_success(fhir_id=fhir_id, response_data=response_data)
+                
+                # Update source object with FHIR ID if it's a Patient
+                if queue_item.source_object and queue_item.resource_type == 'Patient':
+                    self._update_source_object_fhir_id(queue_item.source_object, fhir_id)
+                
+                self._log_sync_event(queue_item, 'INFO', f"Resource created with ID: {fhir_id}")
+                
+                # Now check for any other pending items for the same object and mark them as success
+                self._mark_duplicate_items_as_success(queue_item, fhir_id, response_data)
+                
+                return True
+                
             else:
-                success = self._sync_without_rule(queue_item)
-            
-            return success
-            
+                error_msg = f"HTTP {response.status_code}: {response.text[:500]}"
+                queue_item.mark_failed(error_msg, response_data={'status_code': response.status_code})
+                self._log_sync_event(queue_item, 'ERROR', error_msg)
+                return False
+                
         except Exception as e:
-            logger.error(f"Sync failed for {queue_item}: {e}")
-            queue_item.mark_failed(str(e))
-            self._log_sync_event(queue_item, 'ERROR', f"Sync failed: {e}")
-            return False
+            error_msg = f"Request failed: {str(e)}"
+            queue_item.mark_failed(error_msg)
+            self._log_sync_event(queue_item, 'ERROR', error_msg)
+        return False
+
+    def _mark_duplicate_items_as_success(self, original_item: SyncQueue, fhir_id: str, response_data: Dict):
+        """Mark any other pending queue items for the same object as success"""
+        
+        duplicate_items = SyncQueue.objects.filter(
+            object_id=original_item.object_id,
+            resource_type=original_item.resource_type,
+            status__in=['pending', 'processing']
+        ).exclude(id=original_item.id)
+        
+        for item in duplicate_items:
+            try:
+                item.mark_success(fhir_id=fhir_id, response_data=response_data)
+                
+                # Update source object with FHIR ID if it's a Patient
+                if item.source_object and item.resource_type == 'Patient':
+                    self._update_source_object_fhir_id(item.source_object, fhir_id)
+                
+                self._log_sync_event(
+                    item, 
+                    'INFO', 
+                    f"Marked as success using FHIR resource from original sync: {fhir_id}"
+                )
+                
+                logger.info(f"Marked duplicate queue item {item.id} as success with FHIR ID: {fhir_id}")
+                
+            except Exception as e:
+                logger.error(f"Failed to mark duplicate item {item.id} as success: {e}")
+                item.mark_failed(f"Failed to mark as duplicate success: {e}")
+
+    def _get_existing_fhir_id_from_source(self, queue_item: SyncQueue) -> str:
+        """Get existing FHIR ID from source object if available"""
+        if queue_item.source_object and hasattr(queue_item.source_object, 'fhir_id'):
+            return queue_item.source_object.fhir_id
+        return None
     
     def _sync_with_rule(self, queue_item: SyncQueue) -> bool:
         """Sync resource using sync rule for field mappings and validation"""
@@ -240,11 +380,11 @@ class FHIRSyncService:
             flattened['postal_code'] = address.get('postalCode')
             flattened['country'] = address.get('country')
 
-            # Extract other fields
-            flattened['gender'] = fhir_data.get('gender')
-            flattened['birth_date'] = fhir_data.get('birthDate')
+        # Extract other fields
+        flattened['gender'] = fhir_data.get('gender')
+        flattened['birth_date'] = fhir_data.get('birthDate')
 
-            # Extract identifiers
+        # Extract identifiers
         identifiers = fhir_data.get('identifier', [])
         for identifier in identifiers:
             identifier_type = identifier.get('type', {})
@@ -333,9 +473,6 @@ class FHIRSyncService:
 
         return data
 
-
-
-
     def _perform_sync_operation(self, queue_item: SyncQueue, fhir_data: Dict) -> bool:
         """Perform the actual sync operation"""
         # Determine operation
@@ -347,33 +484,6 @@ class FHIRSyncService:
             return self._delete_resource(queue_item)
         else:
             raise ValueError(f"Unknown operation: {queue_item.operation}")
-    
-    def _create_resource(self, queue_item: SyncQueue, fhir_data: Dict) -> bool:
-        """Create new FHIR resource"""
-        url = f"{self.base_url}/{queue_item.resource_type}"
-        
-        response = self.session.post(
-            url, 
-            json=fhir_data, 
-            timeout=getattr(self.config, 'timeout', 30)
-        )
-        
-        if response.status_code in [200, 201]:
-            response_data = response.json()
-            fhir_id = response_data.get('id')
-            queue_item.mark_success(fhir_id=fhir_id, response_data=response_data)
-            
-            # Update source object with FHIR ID if it's a Patient
-            if queue_item.source_object and queue_item.resource_type == 'Patient':
-                self._update_source_object_fhir_id(queue_item.source_object, fhir_id)
-            
-            self._log_sync_event(queue_item, 'INFO', f"Resource created with ID: {fhir_id}")
-            return True
-        else:
-            error_msg = f"HTTP {response.status_code}: {response.text[:500]}"
-            queue_item.mark_failed(error_msg, response_data={'status_code': response.status_code})
-            self._log_sync_event(queue_item, 'ERROR', error_msg)
-            return False
     
     def _update_resource(self, queue_item: SyncQueue, fhir_data: Dict) -> bool:
         """Update existing FHIR resource"""
@@ -508,4 +618,5 @@ class FHIRSyncService:
         except Exception as e:
             logger.error(f"Unexpected error checking FHIR server availability: {e}")
             return False
+        
     

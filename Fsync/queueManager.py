@@ -81,7 +81,7 @@ class SyncQueueManager:
             priority=priority,
             sync_rule=sync_rule
         )
-    
+    @staticmethod
     def queue_observation(observation, operation: str = 'create', priority: int = 100) -> SyncQueue:
         """Convenience method to queue an Observation resource"""
         # Find the appropriate sync rule for Observation
@@ -94,6 +94,25 @@ class SyncQueueManager:
             resource_type='Observation',
             resource_id=observation.id,
             source_object=observation,
+            operation=operation,
+            priority=priority,
+            sync_rule=sync_rule
+        )
+    
+
+    @staticmethod
+    def queue_condition(condition, operation: str = 'create', priority: int = 100) -> SyncQueue:
+        """Convenience method to queue a Condition resource"""
+        # Find the appropriate sync rule for Condition
+        sync_rule = SyncRule.objects.filter(
+            resource_type='Condition',
+            is_enabled=True
+        ).first()
+        
+        return SyncQueueManager.queue_resource(
+            resource_type='Condition',
+            resource_id=condition.id,
+            source_object=condition,
             operation=operation,
             priority=priority,
             sync_rule=sync_rule

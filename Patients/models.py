@@ -7,6 +7,98 @@ import uuid
 from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField, EncryptedEmailField
 
 
+def clean_encrypted_value(value):
+    """
+    Clean encrypted field values before FHIR validation.
+    This function handles any decryption artifacts or empty values.
+    """
+    if value is None:
+        return None
+    
+    # Convert to string if not already
+    if not isinstance(value, str):
+        value = str(value)
+    
+    # Strip whitespace
+    value = value.strip()
+    
+    # Return None for empty strings
+    if not value:
+        return None
+    
+    # Handle common encryption artifacts or placeholder values
+    if value.lower() in ['none', 'null', 'undefined', '']:
+        return None
+    
+    return value
+
+
+def validate_fhir_data(fhir_data, resource_type):
+    """
+    Enhanced validation function that specifically addresses HAPI FHIR warnings.
+    """
+    if not fhir_data or not isinstance(fhir_data, dict):
+        return False, "Invalid FHIR data structure"
+    
+    if fhir_data.get('resourceType') != resource_type:
+        return False, f"Resource type mismatch: expected {resource_type}"
+    
+    if not fhir_data.get('id'):
+        return False, "Missing required 'id' field"
+    
+    if resource_type == 'Patient':
+        # Validate name structure
+        names = fhir_data.get('name', [])
+        for i, name in enumerate(names):
+            if not isinstance(name, dict):
+                return False, f"Name[{i}] must be an object, not {type(name).__name__}"
+            
+            # Validate given names is array
+            if 'given' in name and not isinstance(name['given'], list):
+                return False, f"Name[{i}].given must be an array"
+            
+            # Validate prefix/suffix are arrays
+            for field in ['prefix', 'suffix']:
+                if field in name and not isinstance(name[field], list):
+                    return False, f"Name[{i}].{field} must be an array"
+        
+        # Validate telecom structure
+        telecom = fhir_data.get('telecom', [])
+        for i, contact in enumerate(telecom):
+            if not isinstance(contact, dict):
+                return False, f"Telecom[{i}] must be an object"
+            
+            if 'system' not in contact or 'value' not in contact:
+                return False, f"Telecom[{i}] missing required system or value"
+        
+        # Validate address structure
+        addresses = fhir_data.get('address', [])
+        for i, address in enumerate(addresses):
+            if not isinstance(address, dict):
+                return False, f"Address[{i}] must be an object"
+            
+            # Validate line is array
+            if 'line' in address and not isinstance(address['line'], list):
+                return False, f"Address[{i}].line must be an array"
+        
+        # Validate identifier structure
+        identifiers = fhir_data.get('identifier', [])
+        for i, identifier in enumerate(identifiers):
+            if not isinstance(identifier, dict):
+                return False, f"Identifier[{i}] must be an object"
+            
+            if 'value' not in identifier:
+                return False, f"Identifier[{i}] missing required value"
+            
+            # Validate type structure if present
+            if 'type' in identifier:
+                type_obj = identifier['type']
+                if not isinstance(type_obj, dict):
+                    return False, f"Identifier[{i}].type must be an object"
+    
+    return True, "Valid"
+
+
 class Patient(models.Model):
     # Core Identity Fields
     patient_id = models.CharField(max_length=100, unique=True, help_text="Internal patient identifier")
@@ -209,23 +301,51 @@ class Patient(models.Model):
         return mrn or national_id or self.patient_id
     
     def to_fhir_dict(self):
-        """Convert patient data to FHIR-compatible dictionary structure (comprehensive)"""
+        """Convert patient data to FHIR-compatible dictionary structure (FIXED VERSION)"""
         fhir_data = {
             "resourceType": "Patient",
             "id": self.patient_id,
-            "identifier": [
-                {
-                    "use": "usual",
-                    "type": {
-                        "coding": [{"system": "http://terminology.hl7.org/CodeSystem/v2-0203", "code": "MR"}]
-                    },
-                    "value": self.get_primary_identifier()
-                }
-            ],
             "active": self.active,
         }
         
-        # Add name information - handle encrypted fields safely
+        # === IDENTIFIERS - Fixed structure ===
+        identifiers = []
+        
+        # Primary identifier (MRN/Patient ID)
+        primary_id = self.get_primary_identifier()
+        if primary_id:
+            identifiers.append({
+                "use": "usual",
+                "type": {
+                    "coding": [{
+                        "system": "http://terminology.hl7.org/CodeSystem/v2-0203", 
+                        "code": "MR",
+                        "display": "Medical Record Number"
+                    }]
+                },
+                "value": primary_id
+            })
+        
+        # National ID as additional identifier
+        national_id = self.get_encrypted_field('national_id')
+        if national_id and national_id != primary_id:
+            identifiers.append({
+                "use": "official",
+                "type": {
+                    "coding": [{
+                        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                        "code": "SB",
+                        "display": "Social Beneficiary Identifier"
+                    }]
+                },
+                "value": national_id
+            })
+        
+        if identifiers:
+            fhir_data["identifier"] = identifiers
+        
+        # === NAME - Fixed structure ===
+        names = []
         given_name = self.get_encrypted_field('given_name')
         family_name = self.get_encrypted_field('family_name')
         middle_name = self.get_encrypted_field('middle_name')
@@ -233,97 +353,115 @@ class Patient(models.Model):
         name_suffix = self.get_encrypted_field('name_suffix')
         legacy_name = self.get_encrypted_field('name')
         
-        if given_name and family_name:
-            name_data = {
-                "use": "official",
-                "family": family_name,
-                "given": [given_name]
-            }
+        if given_name or family_name:
+            name_data = {"use": "official"}
             
+            # Family name (required if we have structured names)
+            if family_name:
+                name_data["family"] = family_name
+            
+            # Given names array
+            given_names = []
+            if given_name:
+                given_names.append(given_name)
             if middle_name:
-                name_data["given"].append(middle_name)
+                given_names.append(middle_name)
+            if given_names:
+                name_data["given"] = given_names
+            
+            # Prefix array
             if name_prefix:
                 name_data["prefix"] = [name_prefix]
+            
+            # Suffix array  
             if name_suffix:
                 name_data["suffix"] = [name_suffix]
-                
-            fhir_data["name"] = [name_data]
+            
+            names.append(name_data)
             
         elif legacy_name:
             # Handle legacy name field
-            name_parts = legacy_name.split()
-            if len(name_parts) > 1:
-                family = name_parts[-1]
-                given = name_parts[:-1]
-            else:
-                family = legacy_name
-                given = [legacy_name]
+            name_parts = legacy_name.strip().split()
+            if name_parts:
+                name_data = {"use": "official"}
                 
-            fhir_data["name"] = [
-                {
-                    "use": "official",
-                    "family": family,
-                    "given": given
-                }
-            ]
+                if len(name_parts) == 1:
+                    # Single name - use as both given and family
+                    name_data["family"] = name_parts[0]
+                    name_data["given"] = [name_parts[0]]
+                else:
+                    # Multiple parts - last is family, rest are given
+                    name_data["family"] = name_parts[-1]
+                    name_data["given"] = name_parts[:-1]
+                
+                names.append(name_data)
         
-        # Add gender
+        if names:
+            fhir_data["name"] = names
+        
+        # === GENDER ===
         if self.gender and self.gender != "unknown":
             fhir_data["gender"] = self.gender
         
-        # Add national ID as additional identifier
-        national_id = self.get_encrypted_field('national_id')
-        if national_id:
-            national_id_identifier = {
-                "use": "official",
-                "type": {
-                    "text": "National ID"
-                },
-                "value": national_id,
-                "system": "http://example.org/national-id"
-            }
-            if "identifier" not in fhir_data:
-                fhir_data["identifier"] = []
-            fhir_data["identifier"].append(national_id_identifier)
-        
-        # Add birth date if available
+        # === BIRTH DATE ===
         if self.birth_date:
             fhir_data["birthDate"] = self.birth_date.isoformat()
-            
-        # Add telecom information - handle encrypted fields safely
+        
+        # === TELECOM - Fixed structure ===
         telecom = []
         primary_phone = self.get_encrypted_field('primary_phone')
         secondary_phone = self.get_encrypted_field('secondary_phone')
         email = self.get_encrypted_field('email')
         
         if primary_phone:
-            telecom.append({"system": "phone", "value": primary_phone, "use": "home"})
+            telecom.append({
+                "system": "phone",
+                "value": primary_phone,
+                "use": "home"
+            })
+        
         if secondary_phone:
-            telecom.append({"system": "phone", "value": secondary_phone, "use": "work"})
+            telecom.append({
+                "system": "phone", 
+                "value": secondary_phone,
+                "use": "work"
+            })
+        
         if email:
-            telecom.append({"system": "email", "value": email})
-            
+            telecom.append({
+                "system": "email",
+                "value": email,
+                "use": "home"
+            })
+        
         if telecom:
             fhir_data["telecom"] = telecom
-            
-        # Add address information - handle encrypted fields safely
+        
+        # === ADDRESS - Fixed structure ===
+        addresses = []
         address_line1 = self.get_encrypted_field('address_line1')
         address_line2 = self.get_encrypted_field('address_line2')
         city = self.get_encrypted_field('city')
         state_province = self.get_encrypted_field('state_province')
         postal_code = self.get_encrypted_field('postal_code')
         
-        if any([address_line1, city, state_province, postal_code]):
+        # Only create address if we have meaningful data
+        if any([address_line1, address_line2, city, state_province, postal_code]):
             address_data = {
                 "use": "home",
                 "type": "physical"
             }
             
-            if address_line1 or address_line2:
-                lines = [line for line in [address_line1, address_line2] if line]
-                if lines:
-                    address_data["line"] = lines
-                    
+            # Address lines array
+            lines = []
+            if address_line1:
+                lines.append(address_line1)
+            if address_line2:
+                lines.append(address_line2)
+            if lines:
+                address_data["line"] = lines
+            
+            # Other address components
             if city:
                 address_data["city"] = city
             if state_province:
@@ -332,30 +470,92 @@ class Patient(models.Model):
                 address_data["postalCode"] = postal_code
             if self.country:
                 address_data["country"] = self.country
-                
-            fhir_data["address"] = [address_data]
-        
-        # Add marital status
-        if self.marital_status and self.marital_status != "unknown":
-            fhir_data["maritalStatus"] = {
-                "coding": [{"system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "code": self.marital_status}]
-            }
             
-        # Add deceased information
+            addresses.append(address_data)
+        
+        if addresses:
+            fhir_data["address"] = addresses
+        
+        # === MARITAL STATUS ===
+        if self.marital_status and self.marital_status != "unknown":
+            marital_status_codes = {
+                "single": "S",
+                "married": "M", 
+                "divorced": "D",
+                "widowed": "W",
+                "separated": "L"
+            }
+            code = marital_status_codes.get(self.marital_status, self.marital_status)
+            fhir_data["maritalStatus"] = {
+                "coding": [{
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+                    "code": code,
+                    "display": self.marital_status.title()
+                }]
+            }
+        
+        # === DECEASED STATUS ===
         if self.deceased:
             if self.deceased_date:
                 fhir_data["deceasedDateTime"] = self.deceased_date.isoformat()
             else:
                 fhir_data["deceasedBoolean"] = True
         
-        # Add last arrived as extension
-        fhir_data["extension"] = [
-            {
+        # === EXTENSIONS ===
+        extensions = []
+        
+        # Last arrived extension
+        if self.last_arrived:
+            extensions.append({
                 "url": "http://example.org/fhir/StructureDefinition/last-arrived",
-                "valueDate": self.last_arrived.isoformat() if self.last_arrived else date.today().isoformat()
-            }
-        ]
-                
+                "valueDate": self.last_arrived.isoformat()
+            })
+        
+        # Blood type extension
+        blood_type = self.get_encrypted_field('blood_type')
+        if blood_type:
+            extensions.append({
+                "url": "http://example.org/fhir/StructureDefinition/blood-type",
+                "valueString": blood_type
+            })
+        
+        # Allergies extension
+        allergies = self.get_encrypted_field('allergies')
+        if allergies:
+            extensions.append({
+                "url": "http://example.org/fhir/StructureDefinition/allergies",
+                "valueString": allergies
+            })
+        
+        # Emergency contact extension
+        emergency_contact_name = self.get_encrypted_field('emergency_contact_name')
+        emergency_contact_phone = self.get_encrypted_field('emergency_contact_phone')
+        emergency_contact_relationship = self.get_encrypted_field('emergency_contact_relationship')
+        
+        if any([emergency_contact_name, emergency_contact_phone, emergency_contact_relationship]):
+            emergency_contact = {}
+            if emergency_contact_name:
+                emergency_contact["name"] = emergency_contact_name
+            if emergency_contact_phone:
+                emergency_contact["phone"] = emergency_contact_phone
+            if emergency_contact_relationship:
+                emergency_contact["relationship"] = emergency_contact_relationship
+            
+            extensions.append({
+                "url": "http://example.org/fhir/StructureDefinition/emergency-contact",
+                "valueString": str(emergency_contact)  # Convert to string for FHIR
+            })
+        
+        # Preferred language extension
+        if self.preferred_language and self.preferred_language != "en":
+            extensions.append({
+                "url": "http://example.org/fhir/StructureDefinition/preferred-language",
+                "valueCode": self.preferred_language
+            })
+        
+        if extensions:
+            fhir_data["extension"] = extensions
+        
         return fhir_data
     
     def to_json(self):

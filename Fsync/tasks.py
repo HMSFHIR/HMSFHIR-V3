@@ -1,5 +1,3 @@
-# tasks.py - Complete Celery Tasks with Encryption Support
-# ============================================================================
 """
 This module contains Celery tasks for synchronizing healthcare data from a Hospital
 Management System (HMS) to a FHIR (Fast Healthcare Interoperability Resources) server.
@@ -231,11 +229,9 @@ def retry_failed_syncs_task():
         logger.error(f"Traceback: {traceback.format_exc()}")
         return {'error': str(e)}
 
-#
 # ============================================================================
 # PATIENT-SPECIFIC TASKS
 # ============================================================================
-
 @shared_task
 def sync_patient_task(patient_id, operation='update'):
     """
@@ -402,4 +398,1221 @@ def validate_patient_data_task(patient_id=None, limit=10):
         
     except Exception as e:
         logger.error(f"Patient data validation failed: {e}")
+        return {'error': str(e)}
+    
+
+
+# ============================================================================
+# OBSERVATION SYNC TASKS
+# ============================================================================
+
+@shared_task
+def sync_pending_observations():
+    """Sync all pending observations to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        # Get pending observation syncs
+        pending_observations = SyncQueue.objects.filter(
+            resource_type='Observation',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]  # Process 50 at a time
+        
+        results = {'success': 0, 'failed': 0}
+        
+        for queue_item in pending_observations:
+            try:
+                # Check if encounter needs to be removed from FHIR data
+                if 'encounter' in queue_item.fhir_data:
+                    # Verify encounter is synced
+                    from MedicalRecords.models import Observation
+                    obs = Observation.objects.get(id=queue_item.object_id)
+                    
+                    if hasattr(obs, 'encounter') and obs.encounter:
+                        encounter_sync = SyncQueue.objects.filter(
+                            resource_type='Encounter',
+                            object_id=obs.encounter.id,
+                            status='success'
+                        ).first()
+                        
+                        if not encounter_sync:
+                            # Remove encounter reference if not synced
+                            queue_item.fhir_data.pop('encounter', None)
+                            queue_item.save()
+                            logger.info(f"Removed unsynced encounter reference from observation {queue_item.object_id}")
+                
+                # Sync the observation
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced observation {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync observation {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing observation {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Observation sync completed: {results['success']} success, {results['failed']} failed")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Observation sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def queue_new_observations():
+    """Queue any observations that aren't in the sync queue yet"""
+    try:
+        from MedicalRecords.models import Observation
+        
+        # Get observations not in sync queue (checking all statuses, not just successful)
+        synced_obs_ids = SyncQueue.objects.filter(
+            resource_type='Observation'
+        ).values_list('object_id', flat=True).distinct()  # Add distinct() to avoid duplicates
+        
+        unsynced_observations = Observation.objects.exclude(
+            id__in=synced_obs_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        
+        for obs in unsynced_observations:
+            try:
+                # Double-check for existing queue items before creating
+                existing_item = SyncQueue.objects.filter(
+                    resource_type='Observation',
+                    object_id=obs.id
+                ).first()
+                
+                if existing_item:
+                    logger.info(f"Skipping observation {obs.id} - already in queue (item {existing_item.id})")
+                    continue
+                
+                # Build FHIR data
+                fhir_data = {
+                    "resourceType": "Observation",
+                    "status": "final",
+                    "code": {"text": obs.code},
+                    "subject": {"reference": f"Patient/{obs.patient.patient_id}"},
+                }
+                
+                if obs.observation_time:
+                    fhir_data["effectiveDateTime"] = obs.observation_time.isoformat()
+                
+                # Add value
+                try:
+                    fhir_data["valueQuantity"] = {
+                        "value": float(obs.value),
+                        "unit": getattr(obs, 'unit', '')
+                    }
+                except:
+                    fhir_data["valueString"] = str(obs.value)
+                
+                # Don't add encounter reference unless it's synced
+                if hasattr(obs, 'encounter') and obs.encounter:
+                    encounter_sync = SyncQueue.objects.filter(
+                        resource_type='Encounter',
+                        object_id=obs.encounter.id,
+                        status='success'
+                    ).first()
+                    
+                    if encounter_sync and encounter_sync.fhir_id:
+                        fhir_data["encounter"] = {"reference": f"Encounter/{encounter_sync.fhir_id}"}
+                
+                # Create queue item with get_or_create to prevent duplicates
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='Observation',
+                    object_id=obs.id,
+                    defaults={
+                        'resource_id': str(obs.id),
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 50
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued observation {obs.id} for sync")
+                else:
+                    logger.info(f"Observation {obs.id} already queued (item {queue_item.id})")
+                
+            except Exception as e:
+                logger.error(f"Failed to queue observation {obs.id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new observations for sync")
+        return {'queued': queued_count}
+        
+    except Exception as e:
+        logger.error(f"Queue observations task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def sync_pending_observations():
+    """Sync all pending observations to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        # Get pending observation syncs
+        pending_observations = SyncQueue.objects.filter(
+            resource_type='Observation',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]  # Process 50 at a time
+        
+        results = {'success': 0, 'failed': 0, 'skipped': 0}
+        
+        for queue_item in pending_observations:
+            try:
+                # Check for duplicates before processing
+                duplicate_processing = SyncQueue.objects.filter(
+                    resource_type='Observation',
+                    object_id=queue_item.object_id,
+                    status='processing'
+                ).exclude(id=queue_item.id).exists()
+                
+                if duplicate_processing:
+                    logger.info(f"Skipping observation {queue_item.object_id} - another item is already processing")
+                    results['skipped'] += 1
+                    continue
+                
+                # Check if encounter needs to be removed from FHIR data
+                if 'encounter' in queue_item.fhir_data:
+                    # Verify encounter is synced
+                    from MedicalRecords.models import Observation
+                    obs = Observation.objects.get(id=queue_item.object_id)
+                    
+                    if hasattr(obs, 'encounter') and obs.encounter:
+                        encounter_sync = SyncQueue.objects.filter(
+                            resource_type='Encounter',
+                            object_id=obs.encounter.id,
+                            status='success'
+                        ).first()
+                        
+                        if not encounter_sync:
+                            # Remove encounter reference if not synced
+                            queue_item.fhir_data.pop('encounter', None)
+                            queue_item.save()
+                            logger.info(f"Removed unsynced encounter reference from observation {queue_item.object_id}")
+                
+                # Sync the observation
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced observation {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync observation {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing observation {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Observation sync completed: {results['success']} success, {results['failed']} failed, {results['skipped']} skipped")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Observation sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_observation_sync_queue():
+    """Combined task to queue and sync observations"""
+    try:
+        # First queue any new observations
+        queue_result = queue_new_observations()
+        logger.info(f"Queue result: {queue_result}")
+        
+        # Then sync pending observations
+        sync_result = sync_pending_observations()
+        logger.info(f"Sync result: {sync_result}")
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0)
+        }
+    except Exception as e:
+        logger.error(f"Process observation sync queue failed: {e}")
+        return {'error': str(e)}
+    
+
+#=============================================================================
+# APPOINTMENT SYNC TASKS 
+#=============================================================================
+
+@shared_task
+def queue_new_appointments():
+    """Queue any appointments that aren't in the sync queue yet"""
+    try:
+        from Appointments.models import Appointment
+        
+        # Get appointments not in sync queue
+        synced_appointment_ids = SyncQueue.objects.filter(
+            resource_type='Appointment'
+        ).values_list('object_id', flat=True).distinct()
+        
+        unsynced_appointments = Appointment.objects.exclude(
+            appointment_id__in=synced_appointment_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        skipped_count = 0
+        
+        for appointment in unsynced_appointments:
+            try:
+                # Double-check for existing queue items before creating
+                existing_item = SyncQueue.objects.filter(
+                    resource_type='Appointment',
+                    object_id=appointment.appointment_id
+                ).first()
+                
+                if existing_item:
+                    logger.info(f"Skipping appointment {appointment.appointment_id} - already in queue")
+                    skipped_count += 1
+                    continue
+                
+                # Map appointment status to FHIR status
+                status_mapping = {
+                    'Scheduled': 'booked',
+                    'Completed': 'fulfilled',
+                    'Cancelled': 'cancelled'
+                }
+                fhir_status = status_mapping.get(appointment.status, 'proposed')
+                
+                # Build FHIR data for Appointment resource
+                fhir_data = {
+                    "resourceType": "Appointment",
+                    "status": fhir_status,
+                    "participant": []
+                }
+                
+                # Add patient as participant using patient_id
+                fhir_data["participant"].append({
+                    "actor": {
+                        "reference": f"Patient/{appointment.patient.patient_id}",
+                        "display": appointment.patient.full_name
+                    },
+                    "status": "accepted"
+                })
+                
+                # FIXED: Only add practitioner if they exist in FHIR
+                if appointment.practitioner:
+                    # Check if practitioner is synced to FHIR
+                    practitioner_sync = SyncQueue.objects.filter(
+                        resource_type='Practitioner',
+                        object_id=appointment.practitioner.id,
+                        status='success'
+                    ).first()
+                    
+                    if practitioner_sync and practitioner_sync.fhir_id:
+                        # Use the FHIR ID from successful sync
+                        fhir_data["participant"].append({
+                            "actor": {
+                                "reference": f"Practitioner/{practitioner_sync.fhir_id}",
+                                "display": appointment.practitioner.name
+                            },
+                            "status": "accepted"
+                        })
+                        logger.info(f"Added synced practitioner {practitioner_sync.fhir_id} to appointment {appointment.appointment_id}")
+                    else:
+                        # DON'T add practitioner reference if not synced to avoid FHIR errors
+                        logger.warning(f"Skipping practitioner {appointment.practitioner.practitioner_id} for appointment {appointment.appointment_id} - not synced to FHIR")
+                
+                # Add appointment date/time
+                if appointment.appointment_date:
+                    from datetime import timedelta
+                    start_time = appointment.appointment_date
+                    end_time = start_time + timedelta(minutes=30)
+                    
+                    fhir_data["start"] = start_time.isoformat()
+                    fhir_data["end"] = end_time.isoformat()
+                
+                # Add notes/comment if present
+                if appointment.notes:
+                    fhir_data["comment"] = str(appointment.notes)
+                
+                # Add service type
+                fhir_data["serviceType"] = [{
+                    "coding": [{
+                        "system": "http://terminology.hl7.org/CodeSystem/service-type",
+                        "code": "124",
+                        "display": "General Practice"
+                    }]
+                }]
+                
+                # Add appointment type
+                fhir_data["appointmentType"] = {
+                    "coding": [{
+                        "system": "http://terminology.hl7.org/CodeSystem/v2-0276",
+                        "code": "ROUTINE",
+                        "display": "Routine appointment"
+                    }]
+                }
+                
+                # Use get_or_create to prevent duplicates
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='Appointment',
+                    object_id=appointment.appointment_id,
+                    defaults={
+                        'resource_id': str(appointment.appointment_id),
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 40
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued appointment {appointment.appointment_id} for sync")
+                else:
+                    skipped_count += 1
+                    logger.info(f"Appointment {appointment.appointment_id} already queued")
+                
+            except Exception as e:
+                logger.error(f"Failed to queue appointment {appointment.appointment_id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new appointments, skipped {skipped_count}")
+        return {'queued': queued_count, 'skipped': skipped_count}
+        
+    except Exception as e:
+        logger.error(f"Queue appointments task failed: {e}")
+        return {'error': str(e)}
+
+
+# OPTIONAL: Task to sync the missing practitioner
+@shared_task
+def queue_missing_practitioners():
+    """Queue practitioners that are referenced by appointments but not synced"""
+    try:
+        from Appointments.models import Appointment
+        from Practitioner.models import Practitioner
+        
+        # Get practitioner IDs from appointments
+        appointment_practitioner_ids = set(
+            Appointment.objects.filter(practitioner__isnull=False)
+            .values_list('practitioner_id', flat=True)
+            .distinct()
+        )
+        
+        # Get already synced practitioner IDs
+        synced_practitioner_ids = set(
+            SyncQueue.objects.filter(resource_type='Practitioner')
+            .values_list('object_id', flat=True)
+        )
+        
+        # Find practitioners that need to be synced
+        unsynced_practitioner_ids = appointment_practitioner_ids - synced_practitioner_ids
+        
+        queued_count = 0
+        
+        for practitioner_id in unsynced_practitioner_ids:
+            try:
+                practitioner = Practitioner.objects.get(id=practitioner_id)
+                
+                # Build FHIR data for practitioner
+                fhir_data = {
+                    "resourceType": "Practitioner",
+                    "active": True,
+                    "name": [{
+                        "text": practitioner.name,
+                        "family": practitioner.name.split()[-1] if ' ' in practitioner.name else practitioner.name,
+                        "given": practitioner.name.split()[:-1] if ' ' in practitioner.name else [practitioner.name]
+                    }]
+                }
+                
+                # Add role/qualification
+                if practitioner.role:
+                    fhir_data["qualification"] = [{
+                        "code": {
+                            "coding": [{
+                                "system": "http://terminology.hl7.org/CodeSystem/practitioner-role",
+                                "code": practitioner.role.lower(),
+                                "display": practitioner.role.title()
+                            }]
+                        }
+                    }]
+                
+                # Add contact info
+                telecom = []
+                if practitioner.phone:
+                    telecom.append({
+                        "system": "phone",
+                        "value": practitioner.phone,
+                        "use": "work"
+                    })
+                if practitioner.email:
+                    telecom.append({
+                        "system": "email", 
+                        "value": practitioner.email,
+                        "use": "work"
+                    })
+                if telecom:
+                    fhir_data["telecom"] = telecom
+                
+                # Add hospital affiliation
+                if practitioner.hospital_affiliation:
+                    fhir_data["extension"] = [{
+                        "url": "http://example.org/fhir/StructureDefinition/hospital-affiliation",
+                        "valueString": practitioner.hospital_affiliation
+                    }]
+                
+                # Create queue item
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='Practitioner',
+                    object_id=practitioner.id,
+                    defaults={
+                        'resource_id': practitioner.practitioner_id,
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 30  # Higher priority since needed for appointments
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued practitioner {practitioner.practitioner_id} for sync")
+                
+            except Practitioner.DoesNotExist:
+                logger.error(f"Practitioner {practitioner_id} not found")
+            except Exception as e:
+                logger.error(f"Failed to queue practitioner {practitioner_id}: {e}")
+        
+        logger.info(f"Queued {queued_count} practitioners for sync")
+        return {'queued': queued_count}
+        
+    except Exception as e:
+        logger.error(f"Queue practitioners task failed: {e}")
+        return {'error': str(e)}
+
+@shared_task
+def sync_pending_appointments():
+    """Sync all pending appointments to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        # Get pending appointment syncs
+        pending_appointments = SyncQueue.objects.filter(
+            resource_type='Appointment',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]  # Process 50 at a time
+        
+        results = {'success': 0, 'failed': 0, 'skipped': 0}
+        
+        for queue_item in pending_appointments:
+            try:
+                # Check for duplicates before processing
+                duplicate_processing = SyncQueue.objects.filter(
+                    resource_type='Appointment',
+                    object_id=queue_item.object_id,
+                    status='processing'
+                ).exclude(id=queue_item.id).exists()
+                
+                if duplicate_processing:
+                    logger.info(f"Skipping appointment {queue_item.object_id} - another item is already processing")
+                    results['skipped'] += 1
+                    continue
+                
+                # Validate appointment still exists
+                try:
+                    from Appointments.models import Appointment
+                    appointment = Appointment.objects.get(appointment_id=queue_item.object_id)
+                    
+                    # Update patient reference to use current patient_id (in case it changed)
+                    if 'participant' in queue_item.fhir_data:
+                        for participant in queue_item.fhir_data['participant']:
+                            if 'actor' in participant and 'reference' in participant['actor']:
+                                if participant['actor']['reference'].startswith('Patient/'):
+                                    participant['actor']['reference'] = f"Patient/{appointment.patient.patient_id}"
+                                    participant['actor']['display'] = appointment.patient.full_name
+                        queue_item.save()
+                    
+                except Appointment.DoesNotExist:
+                    queue_item.mark_failed("Appointment no longer exists")
+                    results['failed'] += 1
+                    continue
+                
+                # Sync the appointment
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced appointment {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync appointment {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing appointment {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Appointment sync completed: {results['success']} success, {results['failed']} failed, {results['skipped']} skipped")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Appointment sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_appointment_sync_queue():
+    """Combined task to queue and sync appointments"""
+    try:
+        # First queue any new appointments
+        queue_result = queue_new_appointments()
+        logger.info(f"Queue result: {queue_result}")
+        
+        # Then sync pending appointments
+        sync_result = sync_pending_appointments()
+        logger.info(f"Sync result: {sync_result}")
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0),
+            'skipped': (queue_result.get('skipped', 0) + sync_result.get('skipped', 0))
+        }
+    except Exception as e:
+        logger.error(f"Process appointment sync queue failed: {e}")
+        return {'error': str(e)}
+
+
+# Optional: Queue missing patients for appointments
+@shared_task
+def queue_appointment_patients():
+    """Queue patients that have appointments but aren't synced yet"""
+    try:
+        from Appointments.models import Appointment
+        from Patients.models import Patient
+        
+        # Get patient IDs from appointments
+        appointment_patient_ids = set(Appointment.objects.values_list('patient_id', flat=True).distinct())
+        
+        # Get already synced patient IDs
+        synced_patient_ids = set(SyncQueue.objects.filter(
+            resource_type='Patient'
+        ).values_list('object_id', flat=True))
+        
+        # Find patients that need to be synced
+        unsynced_patient_ids = appointment_patient_ids - synced_patient_ids
+        
+        queued_count = 0
+        
+        for patient_id in unsynced_patient_ids:
+            try:
+                patient = Patient.objects.get(id=patient_id)
+                
+                # Use the patient's to_fhir_dict method
+                fhir_data = patient.to_fhir_dict()
+                
+                # Create queue item
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='Patient',
+                    object_id=patient.id,
+                    defaults={
+                        'resource_id': patient.patient_id,
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 20  # Higher priority since needed for appointments
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued patient {patient.patient_id} (needed for appointments)")
+                
+            except Patient.DoesNotExist:
+                logger.error(f"Patient {patient_id} not found")
+            except Exception as e:
+                logger.error(f"Failed to queue patient {patient_id}: {e}")
+        
+        logger.info(f"Queued {queued_count} patients needed for appointments")
+        return {'queued': queued_count}
+        
+    except Exception as e:
+        logger.error(f"Queue appointment patients task failed: {e}")
+        return {'error': str(e)}
+    """Update a specific appointment in FHIR when it's modified"""
+    try:
+        from Appointments.models import Appointment
+        
+        appointment = Appointment.objects.get(appointment_id=appointment_id)  # FIXED: use appointment_id
+        
+        # Check if patient is synced
+        patient_sync = SyncQueue.objects.filter(
+            resource_type='Patient',
+            object_id=appointment.patient.id,
+            status='success'
+        ).first()
+        
+        if not patient_sync or not patient_sync.fhir_id:
+            logger.error(f"Cannot update appointment {appointment_id} - patient not synced")
+            return {'status': 'error', 'message': 'Patient not synced'}
+        
+        # Check if appointment already exists in sync queue
+        existing_sync = SyncQueue.objects.filter(
+            resource_type='Appointment',
+            object_id=appointment_id
+        ).first()
+        
+        # Build FHIR data (same logic as queue_new_appointments)
+        status_mapping = {
+            'Scheduled': 'booked',
+            'Completed': 'fulfilled',
+            'Cancelled': 'cancelled'
+        }
+        fhir_status = status_mapping.get(appointment.status, 'proposed')
+        
+        fhir_data = {
+            "resourceType": "Appointment",
+            "status": fhir_status,
+            "participant": [{
+                "actor": {
+                    "reference": f"Patient/{patient_sync.fhir_id}",
+                    "display": appointment.patient.full_name
+                },
+                "status": "accepted"
+            }]
+        }
+        
+        # Add practitioner if exists and is synced
+        if appointment.practitioner:
+            practitioner_sync = SyncQueue.objects.filter(
+                resource_type='Practitioner',
+                object_id=appointment.practitioner.id,
+                status='success'
+            ).first()
+            
+            if practitioner_sync and practitioner_sync.fhir_id:
+                fhir_data["participant"].append({
+                    "actor": {
+                        "reference": f"Practitioner/{practitioner_sync.fhir_id}",
+                        "display": appointment.practitioner.name
+                    },
+                    "status": "accepted"
+                })
+        
+        # Add appointment timing
+        if appointment.appointment_date:
+            from datetime import timedelta
+            start_time = appointment.appointment_date
+            end_time = start_time + timedelta(minutes=30)
+            
+            fhir_data["start"] = start_time.isoformat()
+            fhir_data["end"] = end_time.isoformat()
+        
+        # Add other fields
+        if appointment.notes:
+            fhir_data["comment"] = str(appointment.notes)
+        
+        fhir_data["serviceType"] = [{
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/service-type",
+                "code": "124",
+                "display": "General Practice"
+            }]
+        }]
+        
+        fhir_data["appointmentType"] = {
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/v2-0276",
+                "code": "ROUTINE",
+                "display": "Routine appointment"
+            }]
+        }
+        
+        if existing_sync:
+            # Update existing sync queue item
+            existing_sync.fhir_data = fhir_data
+            existing_sync.operation = 'update' if existing_sync.fhir_id else 'create'
+            existing_sync.status = 'pending'
+            existing_sync.error_message = None
+            existing_sync.save()
+            
+            logger.info(f"Updated sync queue for appointment {appointment_id}")
+        else:
+            # Create new sync queue item
+            SyncQueue.objects.create(
+                resource_type='Appointment',
+                resource_id=str(appointment_id),
+                object_id=appointment_id,
+                operation='create',
+                fhir_data=fhir_data,
+                status='pending',
+                priority=30  # Higher priority for updates
+            )
+            
+            logger.info(f"Created sync queue for appointment {appointment_id}")
+        
+        return {'status': 'queued', 'appointment_id': appointment_id}
+            
+    except Appointment.DoesNotExist:
+        logger.error(f"Appointment {appointment_id} not found")
+        return {'status': 'error', 'message': 'Appointment not found'}
+    except Exception as e:
+        logger.error(f"Update appointment sync failed for {appointment_id}: {e}")
+        return {'status': 'error', 'message': str(e)}
+    """Update a specific appointment in FHIR when it's modified"""
+    try:
+        from Appointments.models import Appointment
+        
+        appointment = Appointment.objects.get(id=appointment_id)  # Use id not appointment_id
+        
+        # Check if patient is synced
+        patient_sync = SyncQueue.objects.filter(
+            resource_type='Patient',
+            object_id=appointment.patient.id,
+            status='success'
+        ).first()
+        
+        if not patient_sync or not patient_sync.fhir_id:
+            logger.error(f"Cannot update appointment {appointment_id} - patient not synced")
+            return {'status': 'error', 'message': 'Patient not synced'}
+        
+        # Check if appointment already exists in sync queue
+        existing_sync = SyncQueue.objects.filter(
+            resource_type='Appointment',
+            object_id=appointment_id
+        ).first()
+        
+        # Build FHIR data (same as in queue_new_appointments)
+        status_mapping = {
+            'Scheduled': 'booked',
+            'Completed': 'fulfilled',
+            'Cancelled': 'cancelled'
+        }
+        fhir_status = status_mapping.get(appointment.status, 'proposed')
+        
+        fhir_data = {
+            "resourceType": "Appointment",
+            "status": fhir_status,
+            "participant": [{
+                "actor": {
+                    "reference": f"Patient/{patient_sync.fhir_id}",
+                    "display": appointment.patient.full_name
+                },
+                "status": "accepted"
+            }]
+        }
+        
+        # Add practitioner if exists and is synced
+        if appointment.practitioner:
+            practitioner_sync = SyncQueue.objects.filter(
+                resource_type='Practitioner',
+                object_id=appointment.practitioner.id,
+                status='success'
+            ).first()
+            
+            if practitioner_sync and practitioner_sync.fhir_id:
+                fhir_data["participant"].append({
+                    "actor": {
+                        "reference": f"Practitioner/{practitioner_sync.fhir_id}",
+                        "display": appointment.practitioner.name
+                    },
+                    "status": "accepted"
+                })
+        
+        # Add appointment timing
+        if appointment.appointment_date:
+            from datetime import timedelta
+            start_time = appointment.appointment_date
+            end_time = start_time + timedelta(minutes=30)
+            
+            fhir_data["start"] = start_time.isoformat()
+            fhir_data["end"] = end_time.isoformat()
+        
+        # Add other fields
+        if appointment.notes:
+            fhir_data["comment"] = str(appointment.notes)
+        
+        fhir_data["serviceType"] = [{
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/service-type",
+                "code": "124",
+                "display": "General Practice"
+            }]
+        }]
+        
+        fhir_data["appointmentType"] = {
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/v2-0276",
+                "code": "ROUTINE",
+                "display": "Routine appointment"
+            }]
+        }
+        
+        if existing_sync:
+            # Update existing sync queue item
+            existing_sync.fhir_data = fhir_data
+            existing_sync.operation = 'update' if existing_sync.fhir_id else 'create'
+            existing_sync.status = 'pending'
+            existing_sync.error_message = None
+            existing_sync.save()
+            
+            logger.info(f"Updated sync queue for appointment {appointment_id}")
+        else:
+            # Create new sync queue item
+            SyncQueue.objects.create(
+                resource_type='Appointment',
+                resource_id=str(appointment_id),
+                object_id=appointment_id,
+                operation='create',
+                fhir_data=fhir_data,
+                status='pending',
+                priority=30  # Higher priority for updates
+            )
+            
+            logger.info(f"Created sync queue for appointment {appointment_id}")
+        
+        return {'status': 'queued', 'appointment_id': appointment_id}
+            
+    except Appointment.DoesNotExist:
+        logger.error(f"Appointment {appointment_id} not found")
+        return {'status': 'error', 'message': 'Appointment not found'}
+    except Exception as e:
+        logger.error(f"Update appointment sync failed for {appointment_id}: {e}")
+        return {'status': 'error', 'message': str(e)}
+    
+
+# ============================================================================
+# ALLERGY INTOLERANCE SYNC TASKS
+# ============================================================================
+
+@shared_task
+def queue_new_allergy_intolerances():
+    """Queue any allergy intolerances that aren't in the sync queue yet"""
+    try:
+        from MedicalRecords.models import AllergyIntolerance
+        
+        # Get allergy intolerances not in sync queue
+        synced_allergy_ids = SyncQueue.objects.filter(
+            resource_type='AllergyIntolerance'
+        ).values_list('object_id', flat=True).distinct()
+        
+        unsynced_allergies = AllergyIntolerance.objects.exclude(
+            id__in=synced_allergy_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        skipped_count = 0
+        
+        for allergy in unsynced_allergies:
+            try:
+                # Double-check for existing queue items
+                existing_item = SyncQueue.objects.filter(
+                    resource_type='AllergyIntolerance',
+                    object_id=allergy.id
+                ).first()
+                
+                if existing_item:
+                    logger.info(f"Skipping allergy {allergy.id} - already in queue")
+                    skipped_count += 1
+                    continue
+                
+                # Use the model's to_fhir_dict method
+                fhir_data = allergy.to_fhir_dict()
+                
+                # FIXED: Use patient_id directly (no dependency check)
+                fhir_data["patient"] = {
+                    "reference": f"Patient/{allergy.patient.patient_id}"
+                }
+                
+                # Create queue item
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='AllergyIntolerance',
+                    object_id=allergy.id,
+                    defaults={
+                        'resource_id': str(allergy.id),
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 35  # Medium priority
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued allergy intolerance {allergy.id} for sync")
+                else:
+                    skipped_count += 1
+                    logger.info(f"Allergy intolerance {allergy.id} already queued")
+                
+            except Exception as e:
+                logger.error(f"Failed to queue allergy {allergy.id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new allergy intolerances, skipped {skipped_count}")
+        return {'queued': queued_count, 'skipped': skipped_count}
+        
+    except Exception as e:
+        logger.error(f"Queue allergy intolerances task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def sync_pending_allergy_intolerances():
+    """Sync all pending allergy intolerances to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        # Get pending allergy intolerance syncs
+        pending_allergies = SyncQueue.objects.filter(
+            resource_type='AllergyIntolerance',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]  # Process 50 at a time
+        
+        results = {'success': 0, 'failed': 0, 'skipped': 0}
+        
+        for queue_item in pending_allergies:
+            try:
+                # Check for duplicates before processing
+                duplicate_processing = SyncQueue.objects.filter(
+                    resource_type='AllergyIntolerance',
+                    object_id=queue_item.object_id,
+                    status='processing'
+                ).exclude(id=queue_item.id).exists()
+                
+                if duplicate_processing:
+                    logger.info(f"Skipping allergy {queue_item.object_id} - another item is already processing")
+                    results['skipped'] += 1
+                    continue
+                
+                # FIXED: Validate allergy still exists and update patient reference
+                try:
+                    from MedicalRecords.models import AllergyIntolerance
+                    allergy = AllergyIntolerance.objects.get(id=queue_item.object_id)
+                    
+                    # Update patient reference to current patient_id (in case it changed)
+                    if 'patient' in queue_item.fhir_data:
+                        queue_item.fhir_data['patient']['reference'] = f"Patient/{allergy.patient.patient_id}"
+                        queue_item.save()
+                    
+                except AllergyIntolerance.DoesNotExist:
+                    queue_item.mark_failed("Allergy intolerance no longer exists")
+                    results['failed'] += 1
+                    continue
+                
+                # REMOVED: Patient sync validation - let FHIR server handle patient references
+                # This allows us to use patient_id references like appointments
+                
+                # Sync the allergy intolerance
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced allergy intolerance {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync allergy intolerance {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing allergy intolerance {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Allergy intolerance sync completed: {results['success']} success, {results['failed']} failed, {results['skipped']} skipped")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Allergy intolerance sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_allergy_intolerance_sync_queue():
+    """Combined task to queue and sync allergy intolerances"""
+    try:
+        # First queue any new allergy intolerances
+        queue_result = queue_new_allergy_intolerances()
+        logger.info(f"Queue result: {queue_result}")
+        
+        # Then sync pending allergy intolerances
+        sync_result = sync_pending_allergy_intolerances()
+        logger.info(f"Sync result: {sync_result}")
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0),
+            'skipped': (queue_result.get('skipped', 0) + sync_result.get('skipped', 0))
+        }
+    except Exception as e:
+        logger.error(f"Process allergy intolerance sync queue failed: {e}")
+        return {'error': str(e)}
+
+# ============================================================================
+# ENCOUNTER SYNC TASKS (Foundation for other resources)
+# ============================================================================
+
+@shared_task
+def queue_new_encounters():
+    """Queue any encounters that aren't in the sync queue yet"""
+    try:
+        from MedicalRecords.models import Encounter
+        
+        # Get encounters not in sync queue
+        synced_encounter_ids = SyncQueue.objects.filter(
+            resource_type='Encounter'
+        ).values_list('object_id', flat=True).distinct()
+        
+        unsynced_encounters = Encounter.objects.exclude(
+            id__in=synced_encounter_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        skipped_count = 0
+        
+        for encounter in unsynced_encounters:
+            try:
+                # Double-check for existing queue items
+                existing_item = SyncQueue.objects.filter(
+                    resource_type='Encounter',
+                    object_id=encounter.id
+                ).first()
+                
+                if existing_item:
+                    skipped_count += 1
+                    continue
+                
+                # Check if patient is synced
+                patient_sync = SyncQueue.objects.filter(
+                    resource_type='Patient',
+                    object_id=encounter.patient.id,
+                    status='success'
+                ).first()
+                
+                if not patient_sync or not patient_sync.fhir_id:
+                    logger.warning(f"Skipping encounter {encounter.id} - patient {encounter.patient.id} not synced yet")
+                    skipped_count += 1
+                    continue
+                
+                # Use the model's to_fhir_dict method
+                fhir_data = encounter.to_fhir_dict()
+                
+                # Update patient reference to use FHIR ID
+                fhir_data["subject"] = {
+                    "reference": f"Patient/{patient_sync.fhir_id}"
+                }
+                
+                # Create queue item
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='Encounter',
+                    object_id=encounter.id,
+                    defaults={
+                        'resource_id': str(encounter.id),
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 25  # Higher priority (foundation for others)
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued encounter {encounter.id} for sync")
+                else:
+                    skipped_count += 1
+                
+            except Exception as e:
+                logger.error(f"Failed to queue encounter {encounter.id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new encounters, skipped {skipped_count}")
+        return {'queued': queued_count, 'skipped': skipped_count}
+        
+    except Exception as e:
+        logger.error(f"Queue encounters task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def sync_pending_encounters():
+    """Sync all pending encounters to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        pending_encounters = SyncQueue.objects.filter(
+            resource_type='Encounter',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]
+        
+        results = {'success': 0, 'failed': 0, 'skipped': 0}
+        
+        for queue_item in pending_encounters:
+            try:
+                # Check for duplicates
+                duplicate_processing = SyncQueue.objects.filter(
+                    resource_type='Encounter',
+                    object_id=queue_item.object_id,
+                    status='processing'
+                ).exclude(id=queue_item.id).exists()
+                
+                if duplicate_processing:
+                    results['skipped'] += 1
+                    continue
+                
+                # Validate encounter and patient
+                try:
+                    from MedicalRecords.models import Encounter
+                    encounter = Encounter.objects.get(id=queue_item.object_id)
+                    
+                    patient_sync = SyncQueue.objects.filter(
+                        resource_type='Patient',
+                        object_id=encounter.patient.id,
+                        status='success'
+                    ).first()
+                    
+                    if not patient_sync or not patient_sync.fhir_id:
+                        queue_item.mark_failed("Patient not synced - cannot sync encounter")
+                        results['failed'] += 1
+                        continue
+                    
+                    # Update patient reference
+                    queue_item.fhir_data['subject']['reference'] = f"Patient/{patient_sync.fhir_id}"
+                    queue_item.save()
+                    
+                except Encounter.DoesNotExist:
+                    queue_item.mark_failed("Encounter no longer exists")
+                    results['failed'] += 1
+                    continue
+                
+                # Sync the encounter
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced encounter {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync encounter {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing encounter {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Encounter sync completed: {results}")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Encounter sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_encounter_sync_queue():
+    """Combined task to queue and sync encounters"""
+    try:
+        queue_result = queue_new_encounters()
+        sync_result = sync_pending_encounters()
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0),
+            'skipped': (queue_result.get('skipped', 0) + sync_result.get('skipped', 0))
+        }
+    except Exception as e:
+        logger.error(f"Process encounter sync queue failed: {e}")
         return {'error': str(e)}

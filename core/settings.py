@@ -171,9 +171,9 @@ else:
     }
 
 # In settings.py
-LOGIN_URL = '/Practitioners/login/'
+LOGIN_URL = ''
 LOGIN_REDIRECT_URL = '/Practitioners/dashboard/'
-LOGOUT_REDIRECT_URL = '/Practitioners/login/'
+LOGOUT_REDIRECT_URL = '/admin/'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
