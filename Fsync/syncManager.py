@@ -135,20 +135,23 @@ class FHIRSyncService:
         ).exclude(id=queue_item.id).first()
         
         if existing_pending:
-            # Mark this item as duplicate/skipped
+            # FIXED: Instead of returning False and leaving stuck in processing,
+            # properly mark this item as skipped/duplicate
             logger.info(f"Found existing pending sync for object_id {queue_item.object_id}, "
                        f"marking current item as duplicate")
             
-            logger.info(
-                f"Skipped sync for item {queue_item.id} (duplicate of item {existing_pending.id})"
+            # Mark as failed with a clear message about being a duplicate
+            queue_item.mark_failed(
+                f"Duplicate sync item - object_id {queue_item.object_id} already being processed by item {existing_pending.id}"
             )
+            
             self._log_sync_event(
                 queue_item,
                 'INFO',
                 f"Skipped duplicate sync - another sync already in progress for object_id {queue_item.object_id}"
             )
 
-            return False
+            return False  # This is OK now because item is properly marked as failed
         
         # No existing successful sync found, proceed with creation
         url = f"{self.base_url}/{queue_item.resource_type}"
@@ -163,6 +166,13 @@ class FHIRSyncService:
             if response.status_code in [200, 201]:
                 response_data = response.json()
                 fhir_id = response_data.get('id')
+                
+                if not fhir_id:
+                    # FHIR server didn't return an ID - this is an error
+                    error_msg = "FHIR server response missing 'id' field"
+                    queue_item.mark_failed(error_msg, response_data=response_data)
+                    self._log_sync_event(queue_item, 'ERROR', error_msg)
+                    return False
                 
                 # Mark current item as success
                 queue_item.mark_success(fhir_id=fhir_id, response_data=response_data)
@@ -188,7 +198,7 @@ class FHIRSyncService:
             error_msg = f"Request failed: {str(e)}"
             queue_item.mark_failed(error_msg)
             self._log_sync_event(queue_item, 'ERROR', error_msg)
-            return False
+        return False
 
     def _mark_duplicate_items_as_success(self, original_item: SyncQueue, fhir_id: str, response_data: Dict):
         """Mark any other pending queue items for the same object as success"""

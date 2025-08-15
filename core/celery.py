@@ -8,6 +8,9 @@ app = Celery('Fsync')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Celery Beat Schedule
+# Updated Celery Beat Schedule
+# Updated Celery Beat Schedule in celery.py
+
 app.conf.beat_schedule = {
     'process-sync-queue': {
         'task': 'Fsync.tasks.process_sync_queue_task',
@@ -20,23 +23,41 @@ app.conf.beat_schedule = {
     },
     'cleanup-old-records': {
         'task': 'Fsync.maintenanceUtils.cleanup_sync_tasks',
-        'schedule': crontab(minute='*/3'),  # Every 3 minutes
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
     },
-     'sync-observations': {
+    
+    # OBSERVATION SYNC TASKS
+    'sync-observations': {
         'task': 'Fsync.tasks.process_observation_sync_queue',
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
     },
-    
-    # Queue new observations every hour
     'queue-new-observations': {
         'task': 'Fsync.tasks.queue_new_observations',
         'schedule': crontab(minute=0),  # Every hour at minute 0
     },
-    
-    # Sync pending observations every 10 minutes
     'sync-pending-observations': {
         'task': 'Fsync.tasks.sync_pending_observations',
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
+    },
+    
+    # NEW: APPOINTMENT SYNC TASKS
+    'sync-appointments': {
+        'task': 'Fsync.tasks.process_appointment_sync_queue',
+        'schedule': crontab(minute='1,6,11,16,21,26,31,36,41,46,51,56'),  # Every 5 minutes offset by 1
+    },
+    'queue-new-appointments': {
+        'task': 'Fsync.tasks.queue_new_appointments',
+        'schedule': crontab(minute=15),  # Every hour at minute 15
+    },
+    'sync-pending-appointments': {
+        'task': 'Fsync.tasks.sync_pending_appointments',
+        'schedule': crontab(minute='2,12,22,32,42,52'),  # Every 10 minutes offset by 2
+    },
+    
+    # CLEANUP TASKS
+    'cleanup-stuck-items': {
+        'task': 'Fsync.maintenanceUtils.cleanup_stuck_processing_items',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
     },
 }
 
