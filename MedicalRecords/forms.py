@@ -6,8 +6,8 @@ import re
 from .models import (
     Encounter, Observation, Condition,
     MedicationStatement, AllergyIntolerance,
-    Procedure, Immunization, DocumentReference
-)
+    Procedure, Immunization
+    )
 
 
 
@@ -368,51 +368,6 @@ class ImmunizationForm(forms.ModelForm):
             raise ValidationError("Administration date cannot be in the future.")
         return date_administered
 
-
-class DocumentReferenceForm(forms.ModelForm):
-    class Meta:
-        model = DocumentReference
-        fields = ['file', 'title', 'type']
-        widgets = {
-            'file': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png,.txt'
-            }),
-            'title': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter document title...'
-            }),
-            'type': forms.Select(choices=[
-                ('', 'Select document type...'),
-                ('pdf', 'PDF Document'),
-                ('word', 'Word Document'),
-                ('image', 'Image'),
-                ('text', 'Text Document'),
-                ('other', 'Other')
-            ], attrs={'class': 'form-control'})
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        self.fields['file'].label = "Document File *"
-        self.fields['title'].label = "Document Title *"
-        self.fields['type'].label = "Document Type *"
-
-    def clean_file(self):
-        file = self.cleaned_data.get('file')
-        if file:
-            # Check file size (limit to 10MB)
-            if file.size > 10 * 1024 * 1024:
-                raise ValidationError("File size cannot exceed 10MB.")
-            
-            # Check file extension
-            allowed_extensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.txt']
-            file_extension = file.name.lower().split('.')[-1]
-            if f'.{file_extension}' not in allowed_extensions:
-                raise ValidationError(f"File type not allowed. Allowed types: {', '.join(allowed_extensions)}")
-        
-        return file
 
 
 # 🎨 Custom widget for better user experience

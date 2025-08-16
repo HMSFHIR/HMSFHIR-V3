@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
             name='SyncRule',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('resource_type', models.CharField(choices=[('Patient', 'Patient'), ('Practitioner', 'Practitioner'), ('Encounter', 'Encounter'), ('Observation', 'Observation'), ('Condition', 'Condition'), ('MedicationStatement', 'MedicationStatement'), ('AllergyIntolerance', 'AllergyIntolerance'), ('Procedure', 'Procedure'), ('Immunization', 'Immunization'), ('DocumentReference', 'DocumentReference')], max_length=50)),
+                ('resource_type', models.CharField(choices=[('Patient', 'Patient'), ('Practitioner', 'Practitioner'), ('Encounter', 'Encounter'), ('Observation', 'Observation'), ('Condition', 'Condition'), ('MedicationStatement', 'MedicationStatement'), ('AllergyIntolerance', 'AllergyIntolerance'), ('Procedure', 'Procedure'), ('Immunization', 'Immunization')], max_length=50)),
                 ('hms_model_app', models.CharField(help_text='Django app name', max_length=100)),
                 ('hms_model_name', models.CharField(help_text='Django model name', max_length=100)),
                 ('is_enabled', models.BooleanField(default=True)),

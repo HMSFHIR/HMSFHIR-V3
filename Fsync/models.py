@@ -46,7 +46,6 @@ class SyncRule(models.Model):
         ('AllergyIntolerance', 'AllergyIntolerance'),
         ('Procedure', 'Procedure'),
         ('Immunization', 'Immunization'),
-        ('DocumentReference', 'DocumentReference'),
     ]
     
     resource_type = models.CharField(max_length=50, choices=RESOURCE_TYPES)
@@ -237,7 +236,6 @@ class SyncRule(models.Model):
         ('AllergyIntolerance', 'AllergyIntolerance'),
         ('Procedure', 'Procedure'),
         ('Immunization', 'Immunization'),
-        ('DocumentReference', 'DocumentReference'),
     ]
     
     resource_type = models.CharField(max_length=50, choices=RESOURCE_TYPES)
