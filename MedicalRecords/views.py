@@ -5,12 +5,12 @@ from datetime import datetime
 from Patients.views import Patient
 from .models import (
     Encounter, Observation, Condition, MedicationStatement,
-    Procedure, DocumentReference, AllergyIntolerance, Immunization
+    Procedure, AllergyIntolerance, Immunization
 )
 from .forms import (
     EncounterForm, ObservationForm, ConditionForm,
     MedicationStatementForm, AllergyIntoleranceForm,
-    ProcedureForm, ImmunizationForm, DocumentReferenceForm
+    ProcedureForm, ImmunizationForm,
 )
 
 
@@ -171,17 +171,6 @@ def medical_records_view(request):
             'fhir_id': f'imm-{imm.id}',
             'last_arrived': normalize_datetime(imm.date_administered),
             'record_id': imm.id,
-            **info
-        })
-
-    # DocumentReference
-    for doc in DocumentReference.objects.select_related('patient').all():
-        info = patient_info(doc.patient)
-        records.append({
-            'record_type': f'Document: {doc.type}',
-            'fhir_id': f'doc-{doc.id}',
-            'last_arrived': normalize_datetime(doc.date_uploaded),
-            'record_id': doc.id,
             **info
         })
 

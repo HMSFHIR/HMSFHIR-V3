@@ -14,7 +14,7 @@ from Patients.models import Patient
 from MedicalRecords.models import (
     Encounter, Observation, Condition, 
     MedicationStatement, AllergyIntolerance,
-    Procedure, Immunization, DocumentReference
+    Procedure, Immunization
 )
 from Practitioner.models import Practitioner
 from Appointments.models import Appointment

@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 from Patients.models import Patient
 
+
 class Encounter(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     encounter_type = models.CharField(max_length=100)
@@ -13,19 +14,52 @@ class Encounter(models.Model):
     status = models.CharField(max_length=50)
     
     def to_fhir_dict(self):
+        # Map your status values to valid FHIR EncounterStatus codes
+        status_mapping = {
+            'completed': 'finished',      # Your "completed" -> FHIR "finished"
+            'active': 'in-progress',      # Your "active" -> FHIR "in-progress" 
+            'planned': 'planned',         # Your "planned" -> FHIR "planned"
+            'cancelled': 'cancelled',     # Your "cancelled" -> FHIR "cancelled"
+            'scheduled': 'planned',       # Your "scheduled" -> FHIR "planned"
+            'finished': 'finished',       # Your "finished" -> FHIR "finished"
+            'in-progress': 'in-progress', # Already valid
+            # Add other mappings as needed
+        }
+        
+        # Get valid FHIR status
+        fhir_status = status_mapping.get(self.status.lower(), 'finished')  # Default to 'finished'
+        
         return {
             "resourceType": "Encounter",
-            "status": self.status,
-            "class": {"code": "AMB"},  # example
-            "type": [{"text": self.encounter_type}],
+            "status": fhir_status,  # Use mapped status
+            "class": {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                "code": "AMB",      # Ambulatory
+                "display": "ambulatory"
+            },
+            "type": [{
+                "coding": [{
+                    "system": "http://snomed.info/sct",
+                    "code": "308335008",
+                    "display": "Patient encounter procedure"
+                }],
+                "text": self.encounter_type
+            }],
             "subject": {"reference": f"Patient/{self.patient.patient_id}"},
             "period": {
                 "start": self.start_time.isoformat(),
-                "end": self.end_time.isoformat()
+                "end": self.end_time.isoformat() if self.end_time else None
             },
-            "reasonCode": [{"text": self.reason}],
-            "location": [{"location": {"display": self.location}}]
+            "reasonCode": [{
+                "text": self.reason
+            }],
+            "location": [{
+                "location": {
+                    "display": self.location
+                }
+            }] if self.location else []
         }
+
 
 class Observation(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
@@ -124,7 +158,7 @@ class Condition(models.Model):
             "code": {"text": self.description, "coding": [{"code": self.code}]},
             "subject": {"reference": f"Patient/{self.patient.patient_id}"},
             "encounter": {"reference": f"Encounter/{self.encounter.id}"},
-            "onsetDate": self.onset_date.isoformat()
+            "onsetDateTime": self.onset_date.isoformat() + "T00:00:00Z" 
         }
 
 class MedicationStatement(models.Model):
@@ -188,7 +222,7 @@ class Procedure(models.Model):
             "code": {"text": self.procedure_name, "coding": [{"code": self.code}]},
             "subject": {"reference": f"Patient/{self.patient.patient_id}"},
             "encounter": {"reference": f"Encounter/{self.encounter.id}"},
-            "performedDate": self.performed_date.isoformat(),
+            "performedDateTime": self.performed_date.isoformat() + "T00:00:00Z",
             "outcome": {"text": self.outcome} if self.outcome else None
         }
 
@@ -208,27 +242,4 @@ class Immunization(models.Model):
             "occurrenceDateTime": self.date_administered.isoformat(),
             "lotNumber": self.lot_number if self.lot_number else None,
             "performer": [{"actor": {"display": self.performer}}] if self.performer else None
-        }
-
-class DocumentReference(models.Model):
-    patient = models.ForeignKey("Patients.Patient", on_delete=models.CASCADE, related_name="medical_documents")
-    file = models.FileField(upload_to="documents/")
-    title = models.CharField(max_length=255)
-    type = models.CharField(max_length=100)  # e.g. discharge summary, lab report
-    date_uploaded = models.DateTimeField(auto_now_add=True)
-    
-    def to_fhir_dict(self):
-        return {
-            "resourceType": "DocumentReference",
-            "status": "current",
-            "type": {"text": self.type},
-            "subject": {"reference": f"Patient/{self.patient.patient_id}"},
-            "date": self.date_uploaded.isoformat(),
-            "description": self.title,
-            "content": [{
-                "attachment": {
-                    "title": self.title,
-                    "url": self.file.url if self.file else None
-                }
-            }]
         }

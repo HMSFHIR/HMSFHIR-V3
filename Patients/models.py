@@ -449,7 +449,8 @@ class Patient(models.Model):
         if any([address_line1, address_line2, city, state_province, postal_code]):
             address_data = {
                 "use": "home",
-                "type": "physical"
+                "type": "physical",
+                "period": {"start": "2020-01-01"}
             }
             
             # Address lines array
