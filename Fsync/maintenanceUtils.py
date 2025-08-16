@@ -122,8 +122,9 @@ def cleanup_stuck_processing_items():
     """Clean up items stuck in processing status and remove duplicates"""
     try:
         # Add Appointment to the resource types to clean up
-        resource_types = ['Observation', 'Patient', 'Encounter', 'Appointment', 'AllergyIntolerance', 'Practitioner', 'Condition', 'MedicationStatement', 'Procedure']
-        
+        resource_types = ['Observation', 'Patient', 'Encounter', 'Appointment', 'AllergyIntolerance', 'Practitioner', 'Condition', 'MedicationStatement', 'Procedure', 'Immunization']
+
+
         total_stuck_reset = 0
         total_duplicates_removed = 0
         

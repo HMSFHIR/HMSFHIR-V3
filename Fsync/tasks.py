@@ -2432,6 +2432,423 @@ def process_procedure_sync_queue():
 
 
 
+# ============================================================================
+# IMMUNIZATION SYNC TASKS
+# Add these to Fsync/tasks.py
+# ============================================================================
+
+@shared_task
+def queue_new_immunizations():
+    """Queue any immunizations that aren't in the sync queue yet"""
+    try:
+        from MedicalRecords.models import Immunization
+        
+        # Get immunizations not in sync queue
+        synced_immunization_ids = SyncQueue.objects.filter(
+            resource_type='Immunization'
+        ).values_list('object_id', flat=True).distinct()
+        
+        unsynced_immunizations = Immunization.objects.exclude(
+            id__in=synced_immunization_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        skipped_count = 0
+        
+        for immunization in unsynced_immunizations:
+            try:
+                # Double-check for existing queue items
+                existing_item = SyncQueue.objects.filter(
+                    resource_type='Immunization',
+                    object_id=immunization.id
+                ).first()
+                
+                if existing_item:
+                    logger.info(f"Skipping immunization {immunization.id} - already in queue")
+                    skipped_count += 1
+                    continue
+                
+                # Use the model's to_fhir_dict method
+                fhir_data = immunization.to_fhir_dict()
+                
+                # Update patient reference to use patient_id
+                fhir_data["patient"] = {
+                    "reference": f"Patient/{immunization.patient.patient_id}"
+                }
+                
+                # Validate immunization status
+                valid_statuses = ['completed', 'entered-in-error', 'not-done']
+                current_status = fhir_data.get('status', 'completed').lower()
+                
+                if current_status not in valid_statuses:
+                    # Map common status values
+                    status_mapping = {
+                        'given': 'completed',
+                        'administered': 'completed',
+                        'done': 'completed',
+                        'finished': 'completed',
+                        'cancelled': 'not-done',
+                        'skipped': 'not-done',
+                        'refused': 'not-done'
+                    }
+                    mapped_status = status_mapping.get(current_status, 'completed')
+                    fhir_data['status'] = mapped_status
+                    logger.info(f"Immunization {immunization.id}: Mapped status {current_status} -> {mapped_status}")
+                
+                # Create queue item
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='Immunization',
+                    object_id=immunization.id,
+                    defaults={
+                        'resource_id': str(immunization.id),
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 36  # Medium-low priority
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued immunization {immunization.id} for sync")
+                else:
+                    skipped_count += 1
+                    logger.info(f"Immunization {immunization.id} already queued")
+                
+            except Exception as e:
+                logger.error(f"Failed to queue immunization {immunization.id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new immunizations, skipped {skipped_count}")
+        return {'queued': queued_count, 'skipped': skipped_count}
+        
+    except Exception as e:
+        logger.error(f"Queue immunizations task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def sync_pending_immunizations():
+    """Sync all pending immunizations to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        # Get pending immunization syncs
+        pending_immunizations = SyncQueue.objects.filter(
+            resource_type='Immunization',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]  # Process 50 at a time
+        
+        results = {'success': 0, 'failed': 0, 'skipped': 0}
+        
+        for queue_item in pending_immunizations:
+            try:
+                # Check for duplicates before processing
+                duplicate_processing = SyncQueue.objects.filter(
+                    resource_type='Immunization',
+                    object_id=queue_item.object_id,
+                    status='processing'
+                ).exclude(id=queue_item.id).exists()
+                
+                if duplicate_processing:
+                    logger.info(f"Skipping immunization {queue_item.object_id} - another item is already processing")
+                    results['skipped'] += 1
+                    continue
+                
+                # Validate immunization still exists and update patient reference
+                try:
+                    from MedicalRecords.models import Immunization
+                    immunization = Immunization.objects.get(id=queue_item.object_id)
+                    
+                    # Update patient reference to current patient_id
+                    if 'patient' in queue_item.fhir_data:
+                        queue_item.fhir_data['patient']['reference'] = f"Patient/{immunization.patient.patient_id}"
+                        queue_item.save()
+                    
+                except Immunization.DoesNotExist:
+                    queue_item.mark_failed("Immunization no longer exists")
+                    results['failed'] += 1
+                    continue
+                
+                # Sync the immunization (no dependency validation - patient_id approach)
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced immunization {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync immunization {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing immunization {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Immunization sync completed: {results['success']} success, {results['failed']} failed, {results['skipped']} skipped")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Immunization sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_immunization_sync_queue():
+    """Combined task to queue and sync immunizations"""
+    try:
+        # First queue any new immunizations
+        queue_result = queue_new_immunizations()
+        logger.info(f"Queue result: {queue_result}")
+        
+        # Then sync pending immunizations
+        sync_result = sync_pending_immunizations()
+        logger.info(f"Sync result: {sync_result}")
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0),
+            'skipped': (queue_result.get('skipped', 0) + sync_result.get('skipped', 0))
+        }
+    except Exception as e:
+        logger.error(f"Process immunization sync queue failed: {e}")
+        return {'error': str(e)}
+
+
+
+# ============================================================================
+# PRACTITIONER SYNC TASKS
+# Add these to Fsync/tasks.py
+# ============================================================================
+
+@shared_task
+def queue_new_practitioners():
+    """Queue any practitioners that aren't in the sync queue yet"""
+    try:
+        from Practitioner.models import Practitioner
+        
+        # Get practitioners not in sync queue
+        synced_practitioner_ids = SyncQueue.objects.filter(
+            resource_type='Practitioner'
+        ).values_list('object_id', flat=True).distinct()
+        
+        unsynced_practitioners = Practitioner.objects.exclude(
+            id__in=synced_practitioner_ids
+        )[:100]  # Limit to 100 at a time
+        
+        queued_count = 0
+        skipped_count = 0
+        
+        for practitioner in unsynced_practitioners:
+            try:
+                # Double-check for existing queue items
+                existing_item = SyncQueue.objects.filter(
+                    resource_type='Practitioner',
+                    object_id=practitioner.id
+                ).first()
+                
+                if existing_item:
+                    logger.info(f"Skipping practitioner {practitioner.id} - already in queue")
+                    skipped_count += 1
+                    continue
+                
+                # Build FHIR data manually (no to_fhir_dict method)
+                fhir_data = {
+                    "resourceType": "Practitioner",
+                    "active": True,
+                    "identifier": [{
+                        "use": "usual",
+                        "system": "http://example.org/practitioner-id",
+                        "value": practitioner.practitioner_id
+                    }]
+                }
+                
+                # Add name
+                if practitioner.name:
+                    # Parse name into family/given components
+                    name_parts = practitioner.name.strip().split()
+                    if len(name_parts) >= 2:
+                        fhir_data["name"] = [{
+                            "use": "official",
+                            "family": name_parts[-1],  # Last part is family name
+                            "given": name_parts[:-1],  # Everything else is given names
+                            "text": practitioner.name
+                        }]
+                    else:
+                        fhir_data["name"] = [{
+                            "use": "official",
+                            "text": practitioner.name
+                        }]
+                
+                # Add telecom (contact info)
+                telecom = []
+                if practitioner.phone:
+                    telecom.append({
+                        "system": "phone",
+                        "value": practitioner.phone,
+                        "use": "work"
+                    })
+                if practitioner.email:
+                    telecom.append({
+                        "system": "email",
+                        "value": practitioner.email,
+                        "use": "work"
+                    })
+                if telecom:
+                    fhir_data["telecom"] = telecom
+                
+                # Add qualification/role
+                if practitioner.role:
+                    # Map role to FHIR practitioner role codes
+                    role_mapping = {
+                        "doctor": "doctor",
+                        "nurse": "nurse", 
+                        "technician": "technician",
+                        "admin": "admin"
+                    }
+                    fhir_role = role_mapping.get(practitioner.role.lower(), practitioner.role.lower())
+                    
+                    fhir_data["qualification"] = [{
+                        "code": {
+                            "coding": [{
+                                "system": "http://terminology.hl7.org/CodeSystem/practitioner-role",
+                                "code": fhir_role,
+                                "display": practitioner.role.title()
+                            }],
+                            "text": practitioner.role
+                        }
+                    }]
+                
+                # Add hospital affiliation as extension
+                if practitioner.hospital_affiliation:
+                    fhir_data["extension"] = [{
+                        "url": "http://example.org/fhir/StructureDefinition/hospital-affiliation",
+                        "valueString": practitioner.hospital_affiliation
+                    }]
+                
+                # Create queue item
+                queue_item, created = SyncQueue.objects.get_or_create(
+                    resource_type='Practitioner',
+                    object_id=practitioner.id,
+                    defaults={
+                        'resource_id': practitioner.practitioner_id,
+                        'operation': 'create',
+                        'fhir_data': fhir_data,
+                        'status': 'pending',
+                        'priority': 20  # High priority (needed for appointments)
+                    }
+                )
+                
+                if created:
+                    queued_count += 1
+                    logger.info(f"Queued practitioner {practitioner.practitioner_id} for sync")
+                else:
+                    skipped_count += 1
+                    logger.info(f"Practitioner {practitioner.practitioner_id} already queued")
+                
+            except Exception as e:
+                logger.error(f"Failed to queue practitioner {practitioner.id}: {e}")
+        
+        logger.info(f"Queued {queued_count} new practitioners, skipped {skipped_count}")
+        return {'queued': queued_count, 'skipped': skipped_count}
+        
+    except Exception as e:
+        logger.error(f"Queue practitioners task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def sync_pending_practitioners():
+    """Sync all pending practitioners to FHIR server"""
+    try:
+        sync_service = FHIRSyncService()
+        
+        # Get pending practitioner syncs
+        pending_practitioners = SyncQueue.objects.filter(
+            resource_type='Practitioner',
+            status='pending'
+        ).order_by('priority', 'created_at')[:50]  # Process 50 at a time
+        
+        results = {'success': 0, 'failed': 0, 'skipped': 0}
+        
+        for queue_item in pending_practitioners:
+            try:
+                # Check for duplicates before processing
+                duplicate_processing = SyncQueue.objects.filter(
+                    resource_type='Practitioner',
+                    object_id=queue_item.object_id,
+                    status='processing'
+                ).exclude(id=queue_item.id).exists()
+                
+                if duplicate_processing:
+                    logger.info(f"Skipping practitioner {queue_item.object_id} - another item is already processing")
+                    results['skipped'] += 1
+                    continue
+                
+                # Validate practitioner still exists
+                try:
+                    from Practitioner.models import Practitioner
+                    practitioner = Practitioner.objects.get(id=queue_item.object_id)
+                    
+                    # Update practitioner data in case it changed
+                    if 'identifier' in queue_item.fhir_data:
+                        for identifier in queue_item.fhir_data['identifier']:
+                            if identifier.get('use') == 'usual':
+                                identifier['value'] = practitioner.practitioner_id
+                    
+                    # Update name if changed
+                    if practitioner.name and 'name' in queue_item.fhir_data:
+                        queue_item.fhir_data['name'][0]['text'] = practitioner.name
+                    
+                    queue_item.save()
+                    
+                except Practitioner.DoesNotExist:
+                    queue_item.mark_failed("Practitioner no longer exists")
+                    results['failed'] += 1
+                    continue
+                
+                # Sync the practitioner (no dependencies)
+                if sync_service.sync_resource(queue_item):
+                    results['success'] += 1
+                    logger.info(f"Successfully synced practitioner {queue_item.resource_id}")
+                else:
+                    results['failed'] += 1
+                    logger.error(f"Failed to sync practitioner {queue_item.resource_id}: {queue_item.error_message}")
+                    
+            except Exception as e:
+                results['failed'] += 1
+                logger.error(f"Exception syncing practitioner {queue_item.resource_id}: {e}")
+                queue_item.mark_failed(str(e))
+        
+        logger.info(f"Practitioner sync completed: {results['success']} success, {results['failed']} failed, {results['skipped']} skipped")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Practitioner sync task failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def process_practitioner_sync_queue():
+    """Combined task to queue and sync practitioners"""
+    try:
+        # First queue any new practitioners
+        queue_result = queue_new_practitioners()
+        logger.info(f"Queue result: {queue_result}")
+        
+        # Then sync pending practitioners
+        sync_result = sync_pending_practitioners()
+        logger.info(f"Sync result: {sync_result}")
+        
+        return {
+            'queued': queue_result.get('queued', 0),
+            'synced': sync_result.get('success', 0),
+            'failed': sync_result.get('failed', 0),
+            'skipped': (queue_result.get('skipped', 0) + sync_result.get('skipped', 0))
+        }
+    except Exception as e:
+        logger.error(f"Process practitioner sync queue failed: {e}")
+        return {'error': str(e)}
+
+
 
 # ============================================================================
 # CELERY SCHEDULE UPDATE
@@ -2439,16 +2856,16 @@ def process_procedure_sync_queue():
 
 # Add to your celery.py beat_schedule:
 
-# Procedure (Patient + Encounter dependent)
-# 'sync-procedures': {
-#     'task': 'Fsync.tasks.process_procedure_sync_queue',
-#     'schedule': crontab(minute='6,11,16,21,26,31,36,41,46,51,56,1'),  # Every 5 min, +6 offset
+# Practitioners (Independent resource, high priority for appointments)
+# 'sync-practitioners': {
+#     'task': 'Fsync.tasks.process_practitioner_sync_queue',
+#     'schedule': crontab(minute='8,13,18,23,28,33,38,43,48,53,58,3'),  # Every 5 min, +8 offset
 # },
-# 'queue-new-procedures': {
-#     'task': 'Fsync.tasks.queue_new_procedures',
-#     'schedule': crontab(minute=30),  # Every hour at minute 30
+# 'queue-new-practitioners': {
+#     'task': 'Fsync.tasks.queue_new_practitioners',
+#     'schedule': crontab(minute=40),  # Every hour at minute 40
 # },
-# 'sync-pending-procedures': {
-#     'task': 'Fsync.tasks.sync_pending_procedures',
-#     'schedule': crontab(minute='6,16,26,36,46,56'),  # Every 10 minutes offset by 6
+# 'sync-pending-practitioners': {
+#     'task': 'Fsync.tasks.sync_pending_practitioners',
+#     'schedule': crontab(minute='8,18,28,38,48,58'),  # Every 10 minutes offset by 8
 # },

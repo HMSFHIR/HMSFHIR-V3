@@ -87,7 +87,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='1,11,21,31,41,51'),  # Every 10 minutes offset by 1
     },
     
-    # Conditions (Patient + Encounter dependent)
+    # Conditions 
     'sync-conditions': {
         'task': 'Fsync.tasks.process_condition_sync_queue',
         'schedule': crontab(minute='4,9,14,19,24,29,34,39,44,49,54,59'),  # Every 5 min, +4 offset
@@ -102,7 +102,7 @@ app.conf.beat_schedule = {
     },
 
     
-    # MedicationStatement (Patient + Encounter dependent)
+    # MedicationStatement 
      'sync-medication-statements': {
         'task': 'Fsync.tasks.process_medication_statement_sync_queue',
         'schedule': crontab(minute='5,10,15,20,25,30,35,40,45,50,55,0'),  # Every 5 min, +5 offset
@@ -116,7 +116,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='5,15,25,35,45,55'),  # Every 10 minutes offset by 5
     },
 
-    # Procedure (Patient + Encounter dependent)
+    # Procedure 
     'sync-procedures': {
         'task': 'Fsync.tasks.process_procedure_sync_queue',
         'schedule': crontab(minute='6,11,16,21,26,31,36,41,46,51,56,1'),  # Every 5 min, +6 offset
@@ -128,6 +128,36 @@ app.conf.beat_schedule = {
     'sync-pending-procedures': {
         'task': 'Fsync.tasks.sync_pending_procedures',
         'schedule': crontab(minute='6,16,26,36,46,56'),  # Every 10 minutes offset by 6
+    },
+
+
+    # Immunization 
+   'sync-immunizations': {
+       'task': 'Fsync.tasks.process_immunization_sync_queue',
+       'schedule': crontab(minute='7,12,17,22,27,32,37,42,47,52,57,2'),  # Every 5 min, +7 offset
+    },
+   'queue-new-immunizations': {
+       'task': 'Fsync.tasks.queue_new_immunizations',
+       'schedule': crontab(minute=35),  # Every hour at minute 35
+    },
+   'sync-pending-immunizations': {
+       'task': 'Fsync.tasks.sync_pending_immunizations',
+       'schedule': crontab(minute='7,17,27,37,47,57'),  # Every 10 minutes offset by 7
+    },
+
+
+    # Practitioners 
+   'sync-practitioners': {
+        'task': 'Fsync.tasks.process_practitioner_sync_queue',
+        'schedule': crontab(minute='8,13,18,23,28,33,38,43,48,53,58,3'),  # Every 5 min, +8 offset
+    },
+    'queue-new-practitioners': {
+        'task': 'Fsync.tasks.queue_new_practitioners',
+        'schedule': crontab(minute=40),  # Every hour at minute 40
+    },
+    'sync-pending-practitioners': {
+        'task': 'Fsync.tasks.sync_pending_practitioners',
+        'schedule': crontab(minute='8,18,28,38,48,58'),  # Every 10 minutes offset by 8
     },
 
     # === DISCOVERY TASKS (Lower Frequency) ===
