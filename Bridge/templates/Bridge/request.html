@@ -6,6 +6,114 @@
 <link rel="stylesheet" type="text/css" href="{% static 'Bridge/request.css' %}">
 <script src="{% static 'js/card.js' %}" ></script>
 
+<style>
+.resource-selection {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.resource-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.resource-option {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.resource-option:hover {
+    background-color: #e9ecef;
+}
+
+.resource-option input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.resource-section {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.resource-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.resource-count {
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+}
+
+.resource-content {
+    padding: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.resource-item {
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #fafafa;
+}
+
+.detail-row {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.detail-label {
+    font-weight: bold;
+    min-width: 120px;
+    color: #6c757d;
+}
+
+.detail-value {
+    flex: 1;
+}
+
+.select-all-btn, .clear-all-btn {
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.select-all-btn {
+    background: #28a745;
+    color: white;
+}
+
+.clear-all-btn {
+    background: #dc3545;
+    color: white;
+}
+</style>
+
 <div class="dashboard-header">
     <h1 class="dashboard-title">
         <i class="fas fa-download"></i>
@@ -42,6 +150,74 @@
                 <input type="text" id="national_id" name="national_id" class="form-control" 
                        placeholder="Enter National ID" value="{{ national_id|default:'' }}">
             </div>
+
+            <!-- Resource Selection -->
+            <div class="resource-selection">
+                <h4>
+                    <i class="fas fa-list-check"></i>
+                    Additional Resources to Fetch
+                </h4>
+                <p>Select which additional patient data you want to retrieve:</p>
+                
+                <div style="margin-bottom: 15px;">
+                    <button type="button" class="select-all-btn" onclick="selectAllResources()">
+                        <i class="fas fa-check-double"></i> Select All
+                    </button>
+                    <button type="button" class="clear-all-btn" onclick="clearAllResources()">
+                        <i class="fas fa-times"></i> Clear All
+                    </button>
+                </div>
+
+                <div class="resource-grid">
+                    <div class="resource-option">
+                        <input type="checkbox" id="fetch_observations" name="fetch_observations" value="1">
+                        <label for="fetch_observations">
+                            <i class="fas fa-chart-line"></i>
+                            Observations (Vital Signs, Labs)
+                        </label>
+                    </div>
+                    
+                    <div class="resource-option">
+                        <input type="checkbox" id="fetch_conditions" name="fetch_conditions" value="1">
+                        <label for="fetch_conditions">
+                            <i class="fas fa-stethoscope"></i>
+                            Conditions (Diagnoses)
+                        </label>
+                    </div>
+                    
+                    <div class="resource-option">
+                        <input type="checkbox" id="fetch_medications" name="fetch_medications" value="1">
+                        <label for="fetch_medications">
+                            <i class="fas fa-pills"></i>
+                            Medications
+                        </label>
+                    </div>
+                    
+                    <div class="resource-option">
+                        <input type="checkbox" id="fetch_allergies" name="fetch_allergies" value="1">
+                        <label for="fetch_allergies">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Allergies
+                        </label>
+                    </div>
+                    
+                    <div class="resource-option">
+                        <input type="checkbox" id="fetch_encounters" name="fetch_encounters" value="1">
+                        <label for="fetch_encounters">
+                            <i class="fas fa-hospital"></i>
+                            Encounters (Visits)
+                        </label>
+                    </div>
+                    
+                    <div class="resource-option">
+                        <input type="checkbox" id="fetch_procedures" name="fetch_procedures" value="1">
+                        <label for="fetch_procedures">
+                            <i class="fas fa-user-md"></i>
+                            Procedures
+                        </label>
+                    </div>
+                </div>
+            </div>
             
             <div class="form-actions">
                 <button type="submit" class="btn btn-success">
@@ -66,7 +242,7 @@
             Patient Information
         </h3>
         <div class="patient-actions">
-            <a href={% url "Save_To_DB" %} class="btn btn-primary">
+            <a href="{% url 'Save_To_DB' %}" class="btn btn-primary">
                 <i class="fas fa-save"></i>
                 Save to Database
             </a>
@@ -220,8 +396,169 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Related Resources Display -->
+    {% if related_data %}
+    <div class="related-resources">
+        <h3><i class="fas fa-database"></i> Related Medical Resources</h3>
+        
+        <!-- Observations -->
+        {% if related_data.observations %}
+        <div class="resource-section">
+            <div class="resource-header">
+                <h4><i class="fas fa-chart-line"></i> Observations</h4>
+                <span class="resource-count">{{ related_data.observations|length }}</span>
+            </div>
+            <div class="resource-content">
+                {% for obs in related_data.observations %}
+                <div class="resource-item">
+                    <h5>{{ obs.code }}</h5>
+                    <div class="detail-row">
+                        <span class="detail-label">Value:</span>
+                        <span class="detail-value">{{ obs.value }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Date:</span>
+                        <span class="detail-value">{{ obs.effective_date|default:"N/A" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value">{{ obs.status|title }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Conditions -->
+        {% if related_data.conditions %}
+        <div class="resource-section">
+            <div class="resource-header">
+                <h4><i class="fas fa-stethoscope"></i> Conditions</h4>
+                <span class="resource-count">{{ related_data.conditions|length }}</span>
+            </div>
+            <div class="resource-content">
+                {% for condition in related_data.conditions %}
+                <div class="resource-item">
+                    <h5>{{ condition.code }}</h5>
+                    <div class="detail-row">
+                        <span class="detail-label">Clinical Status:</span>
+                        <span class="detail-value">{{ condition.clinical_status }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Onset Date:</span>
+                        <span class="detail-value">{{ condition.onset_date|default:"N/A" }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Medications -->
+        {% if related_data.medications %}
+        <div class="resource-section">
+            <div class="resource-header">
+                <h4><i class="fas fa-pills"></i> Medications</h4>
+                <span class="resource-count">{{ related_data.medications|length }}</span>
+            </div>
+            <div class="resource-content">
+                {% for med in related_data.medications %}
+                <div class="resource-item">
+                    <h5>{{ med.medication }}</h5>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value">{{ med.status|title }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Dosage:</span>
+                        <span class="detail-value">{{ med.dosage_instruction }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Allergies -->
+        {% if related_data.allergies %}
+        <div class="resource-section">
+            <div class="resource-header">
+                <h4><i class="fas fa-exclamation-triangle"></i> Allergies</h4>
+                <span class="resource-count">{{ related_data.allergies|length }}</span>
+            </div>
+            <div class="resource-content">
+                {% for allergy in related_data.allergies %}
+                <div class="resource-item">
+                    <h5>{{ allergy.code }}</h5>
+                    <div class="detail-row">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value">{{ allergy.type|title }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Criticality:</span>
+                        <span class="detail-value">{{ allergy.criticality|title }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Encounters -->
+        {% if related_data.encounters %}
+        <div class="resource-section">
+            <div class="resource-header">
+                <h4><i class="fas fa-hospital"></i> Encounters</h4>
+                <span class="resource-count">{{ related_data.encounters|length }}</span>
+            </div>
+            <div class="resource-content">
+                {% for encounter in related_data.encounters %}
+                <div class="resource-item">
+                    <h5>{{ encounter.type|join:", "|default:"Visit" }}</h5>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value">{{ encounter.status|title }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Class:</span>
+                        <span class="detail-value">{{ encounter.class }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Procedures -->
+        {% if related_data.procedures %}
+        <div class="resource-section">
+            <div class="resource-header">
+                <h4><i class="fas fa-user-md"></i> Procedures</h4>
+                <span class="resource-count">{{ related_data.procedures|length }}</span>
+            </div>
+            <div class="resource-content">
+                {% for procedure in related_data.procedures %}
+                <div class="resource-item">
+                    <h5>{{ procedure.code }}</h5>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value">{{ procedure.status|title }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Performed:</span>
+                        <span class="detail-value">{{ procedure.performed_date|default:"N/A" }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
     
-    <!-- Raw FHIR Data (for debugging) -->
+    <!-- Raw FHIR Data -->
     <div class="raw-data-container">
         <button class="btn btn-outline" onclick="toggleRawData()">
             <i class="fas fa-code"></i>
@@ -244,5 +581,52 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+function selectAllResources() {
+    const checkboxes = document.querySelectorAll('.resource-option input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+}
+
+function clearAllResources() {
+    const checkboxes = document.querySelectorAll('.resource-option input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+function clearForm() {
+    document.getElementById('patient_id').value = '';
+    document.getElementById('national_id').value = '';
+    clearAllResources();
+}
+
+function toggleRawData() {
+    const rawData = document.getElementById('rawData');
+    if (rawData.style.display === 'none') {
+        rawData.style.display = 'block';
+    } else {
+        rawData.style.display = 'none';
+    }
+}
+
+function printData() {
+    window.print();
+}
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const patientId = document.getElementById('patient_id').value.trim();
+    const nationalId = document.getElementById('national_id').value.trim();
+    
+    if (!patientId && !nationalId) {
+        e.preventDefault();
+        alert('Please provide either Patient ID or National ID');
+        return false;
+    }
+});
+</script>
 
 {% endblock %}
