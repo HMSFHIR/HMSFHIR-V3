@@ -46,7 +46,7 @@
                     <th>Practitioner</th>
                     <th>Role</th>
                     <th>Contact</th>
-                    <th>Hospital</th>
+                    <th>Department</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -54,28 +54,28 @@
                 {% for practitioner in practitioners %}
                     <tr>
                         <td>
-                            <div class="practitioner-id">{{ practitioner.id }}</div>
-                            <div class="practitioner-name">{{ practitioner.name }}</div>
+                            <div class="practitioner-id">{{ practitioner.practitioner_id }}</div>
+                            <div class="practitioner-name">{{ practitioner.user.first_name }} {{ practitioner.user.last_name }}</div>
                         </td>
                         <td>
-                            <span class="role-badge role-{% if practitioner.role == 'Doctor' %}doctor{% elif practitioner.role == 'Nurse' %}nurse{% elif practitioner.role == 'Admin' %}admin{% else %}specialist{% endif %}">
-                                {{ practitioner.role }}
+                            <span class="role-badge role-{% if practitioner.user_type == 'doctor' %}doctor{% elif practitioner.user_type == 'nurse' %}nurse{% elif practitioner.user_type == 'admin' %}admin{% elif practitioner.user_type == 'IT' %}admin{% else %}specialist{% endif %}">
+                                {{ practitioner.user_type|title }}
                             </span>
                         </td>
                         <td>
-                            <div class="contact-info">{{ practitioner.phone }}</div>
-                            <div class="contact-info">{{ practitioner.email }}</div>
+                            <div class="contact-info">{{ practitioner.phone|default:"No phone" }}</div>
+                            <div class="contact-info">{{ practitioner.user.email }}</div>
                         </td>
-                        <td>{{ practitioner.hospital_affiliation }}</td>
+                        <td>{{ practitioner.department }}</td>
                         <td>
                             <div class="action-buttons">
-                                <a href="{% url 'EditPractitioner' practitioner.id %}" class="btn btn-edit">
+                                <a href="{% url 'EditPractitioner' practitioner.practitioner_id %}" class="btn btn-edit">
                                     <i class="fas fa-edit"></i>
                                     Edit
                                 </a>
-                                <form method="post" action="{% url 'DeletePractitioner' practitioner.id %}" style="display:inline;">
+                                <form method="post" action="{% url 'DeletePractitioner' practitioner.practitioner_id %}" style="display:inline;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-delete" onclick="return confirm('Delete practitioner {{ practitioner.name }}?')">
+                                    <button type="submit" class="btn btn-delete" onclick="return confirm('Delete practitioner {{ practitioner.user.first_name }} {{ practitioner.user.last_name }}?')">
                                         <i class="fas fa-trash"></i>
                                         Delete
                                     </button>

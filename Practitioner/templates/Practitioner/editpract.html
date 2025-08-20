@@ -7,31 +7,345 @@
 
 {% block content %}
 
-<link rel="stylesheet" type="text/css" href="{% static 'Practitioner/addpract.css' %}">
+<style>
+    .edit-practitioner-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
 
-<h2>Edit Practitioner</h2>
+    .page-header {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 30px;
+        border-left: 4px solid #4f46e5;
+    }
 
-<form method="post">
-    {% csrf_token %}
-    
-    {% if form.errors %}
-        <div class="alert alert-danger">
-            <ul>
-                {% for field in form %}
-                    {% for error in field.errors %}
-                        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
-                    {% endfor %}
-                {% endfor %}
-                {% for error in form.non_field_errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    {% endif %}
+    .page-header h2 {
+        margin: 0;
+        color: #1a1a1a;
+        font-size: 28px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
 
-    {{ form.as_p }}
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        overflow: hidden;
+    }
 
-    <button type="submit" class="btn btn-success">💾 Save Changes</button>
-    <a href="{% url 'Practitioner' %}" class="btn btn-secondary">← Cancel</a>
-</form>
+    .alert {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+
+    .alert ul {
+        margin: 0;
+        padding-left: 20px;
+        color: #dc2626;
+    }
+
+    .alert li {
+        margin-bottom: 4px;
+    }
+
+    fieldset {
+        border: none;
+        margin: 0;
+        padding: 30px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    fieldset:last-child {
+        border-bottom: none;
+    }
+
+    legend {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 20px;
+        padding: 0;
+        width: auto;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    legend::before {
+        content: "👤";
+        font-size: 16px;
+    }
+
+    fieldset:last-child legend::before {
+        content: "🏥";
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .form-group input[readonly] {
+        background: #f9fafb;
+        color: #6b7280;
+    }
+
+    .form-group .helptext {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+
+    .form-group .errorlist {
+        margin: 4px 0 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .form-group .errorlist li {
+        color: #dc2626;
+        font-size: 12px;
+        margin-top: 2px;
+    }
+
+    .form-actions {
+        padding: 30px;
+        background: #f9fafb;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-success {
+        background: #059669;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #047857;
+    }
+
+    .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #d1d5db;
+    }
+
+    .password-note {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 12px;
+        font-size: 13px;
+        color: #92400e;
+    }
+
+    @media (max-width: 768px) {
+        .edit-practitioner-container {
+            padding: 10px;
+        }
+
+        .page-header,
+        fieldset {
+            padding: 20px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="edit-practitioner-container">
+    <div class="page-header">
+        <h2>Edit Practitioner</h2>
+    </div>
+
+    <div class="form-container">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div style="padding: 30px 30px 0 30px;">
+                    <div class="alert">
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+
+            <fieldset>
+                <legend>User Account Information</legend>
+                
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                    {{ form.username }}
+                    {% if form.username.help_text %}
+                        <div class="helptext">{{ form.username.help_text }}</div>
+                    {% endif %}
+                    {{ form.username.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.help_text %}
+                        <div class="helptext">{{ form.email.help_text }}</div>
+                    {% endif %}
+                    {{ form.email.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.help_text %}
+                        <div class="helptext">{{ form.first_name.help_text }}</div>
+                    {% endif %}
+                    {{ form.first_name.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.help_text %}
+                        <div class="helptext">{{ form.last_name.help_text }}</div>
+                    {% endif %}
+                    {{ form.last_name.errors }}
+                </div>
+
+                {% if not form.instance.pk %}
+                    <div class="form-group">
+                        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                        {{ form.password }}
+                        {% if form.password.help_text %}
+                            <div class="helptext">{{ form.password.help_text }}</div>
+                        {% endif %}
+                        {{ form.password.errors }}
+                    </div>
+                {% else %}
+                    <div class="password-note">
+                        Password changes must be done through the user management system for security reasons.
+                    </div>
+                {% endif %}
+            </fieldset>
+
+            <fieldset>
+                <legend>Practitioner Details</legend>
+                
+                <div class="form-group">
+                    <label for="{{ form.practitioner_id.id_for_label }}">{{ form.practitioner_id.label }}</label>
+                    {{ form.practitioner_id }}
+                    {% if form.practitioner_id.help_text %}
+                        <div class="helptext">{{ form.practitioner_id.help_text }}</div>
+                    {% endif %}
+                    {{ form.practitioner_id.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.user_type.id_for_label }}">{{ form.user_type.label }}</label>
+                    {{ form.user_type }}
+                    {% if form.user_type.help_text %}
+                        <div class="helptext">{{ form.user_type.help_text }}</div>
+                    {% endif %}
+                    {{ form.user_type.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                    {{ form.phone }}
+                    {% if form.phone.help_text %}
+                        <div class="helptext">{{ form.phone.help_text }}</div>
+                    {% endif %}
+                    {{ form.phone.errors }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.department.id_for_label }}">{{ form.department.label }}</label>
+                    {{ form.department }}
+                    {% if form.department.help_text %}
+                        <div class="helptext">{{ form.department.help_text }}</div>
+                    {% endif %}
+                    {{ form.department.errors }}
+                </div>
+            </fieldset>
+
+            <div class="form-actions">
+                <a href="{% url 'Practitioner' %}" class="btn btn-secondary">
+                    ← Cancel
+                </a>
+                <button type="submit" class="btn btn-success">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
