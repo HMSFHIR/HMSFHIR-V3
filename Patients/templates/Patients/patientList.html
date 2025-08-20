@@ -1,4 +1,4 @@
-<!-- patientList.html (Modern version) -->
+<!-- patientList.html (Role-based version) -->
 {% extends "autht/main.html" %}
 {% load static %}
 {% block PageName %}Patients{% endblock %}
@@ -292,6 +292,15 @@
         color: #374151;
     }
 
+    .access-restricted {
+        background: #fef3c7;
+        border: 1px solid #fbbf24;
+        color: #92400e;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+
     @media (max-width: 768px) {
         .header-section {
             flex-direction: column;
@@ -340,7 +349,11 @@
                 </div>
                 <button class="search-btn" type="submit">Search</button>
             </form>
-            <a href="{% url 'add_patient' %}" class="add-patient-btn">+ Add New Patient</a>
+            
+            <!-- Conditional Add Patient Button -->
+            {% if user.user_type != 'admin' and user.user_type != 'IT' %}
+                <a href="{% url 'add_patient' %}" class="add-patient-btn">+ Add New Patient</a>
+            {% endif %}
         </div>
     </div>
 
@@ -382,21 +395,31 @@
                     <td>
                         <div class="actions-cell">
                             {% if Patient.patient_id %}
+                                <!-- View button - available to all users -->
                                 <a href="{% url 'ViewRecordsSummary' Patient.patient_id %}" 
                                    class="action-btn btn-view" 
                                    title="View Records">👁️</a>
-                                <a href="{% url 'EditPatient' Patient.patient_id %}" 
-                                   class="action-btn btn-edit" 
-                                   title="Edit Patient">✏️</a>
-                                <form method="post" 
-                                      action="{% url 'DeletePatient' Patient.patient_id %}" 
-                                      style="display: inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" 
-                                            class="action-btn btn-delete" 
-                                            title="Delete Patient" 
-                                            onclick="return confirm('Are you sure you want to delete this patient?')">🗑️</button>
-                                </form>
+                                
+                                <!-- Edit and Delete buttons - hidden from admin and IT -->
+                                {% if user.user_type != 'admin' and user.user_type != 'IT' %}
+                                    <a href="{% url 'EditPatient' Patient.patient_id %}" 
+                                       class="action-btn btn-edit" 
+                                       title="Edit Patient">✏️</a>
+                                    <form method="post" 
+                                          action="{% url 'DeletePatient' Patient.patient_id %}" 
+                                          style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="action-btn btn-delete" 
+                                                title="Delete Patient" 
+                                                onclick="return confirm('Are you sure you want to delete this patient?')">🗑️</button>
+                                    </form>
+                                {% else %}
+                                    <!-- Show restricted access message for admin/IT -->
+                                    <span class="access-restricted" title="Patient management restricted for {{ user.user_type }} users">
+                                        View Only
+                                    </span>
+                                {% endif %}
                             {% else %}
                                 <span style="color: #9ca3af; font-size: 14px;">N/A</span>
                             {% endif %}
@@ -410,9 +433,16 @@
                         <span class="empty-text">No patients found</span>
                         <span class="empty-subtext">
                             {% if request.GET.q %}
-                                Try adjusting your search terms or <a href="{% url 'add_patient' %}">add a new patient</a>
+                                Try adjusting your search terms
+                                {% if user.user_type != 'admin' and user.user_type != 'IT' %}
+                                    or <a href="{% url 'add_patient' %}">add a new patient</a>
+                                {% endif %}
                             {% else %}
-                                Add your first patient to get started
+                                {% if user.user_type != 'admin' and user.user_type != 'IT' %}
+                                    Add your first patient to get started
+                                {% else %}
+                                    No patients in the system
+                                {% endif %}
                             {% endif %}
                         </span>
                     </td>

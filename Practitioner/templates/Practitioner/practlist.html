@@ -9,20 +9,31 @@
 <link rel="stylesheet" type="text/css" href="{% static 'Practitioner/practlist.css' %}">
 <script src="{% static 'js/practlistsearch.js' %}" ></script>
 
+<style>
+    .access-restricted {
+        background: #fef3c7;
+        border: 1px solid #fbbf24;
+        color: #92400e;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+</style>
+
 <div class="page-header">
     <div>
         <h1 class="page-title">Practitioners</h1>
         <p class="page-subtitle">Manage hospital practitioners and their information</p>
     </div>
-    {% if user.user_type != 'admin' %}
-        <div></div>
-    {% else %}
+    {% if user.user_type == 'admin' %}
         <div class="operations">
             <a href="{% url 'NewPractitioner' %}" class="add-practitioner-btn">
                 <i class="fas fa-plus"></i>
                 Add Practitioner
             </a>
         </div>
+    {% else %}
+        <div></div>
     {% endif %}
 </div>
 
@@ -69,17 +80,32 @@
                         <td>{{ practitioner.department }}</td>
                         <td>
                             <div class="action-buttons">
-                                <a href="{% url 'EditPractitioner' practitioner.practitioner_id %}" class="btn btn-edit">
-                                    <i class="fas fa-edit"></i>
-                                    Edit
-                                </a>
-                                <form method="post" action="{% url 'DeletePractitioner' practitioner.practitioner_id %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-delete" onclick="return confirm('Delete practitioner {{ practitioner.user.first_name }} {{ practitioner.user.last_name }}?')">
-                                        <i class="fas fa-trash"></i>
-                                        Delete
-                                    </button>
-                                </form>
+                                {% if user.user_type == 'admin' %}
+                                    <!-- Full access for admin -->
+                                    <a href="{% url 'EditPractitioner' practitioner.practitioner_id %}" class="btn btn-edit">
+                                        <i class="fas fa-edit"></i>
+                                        Edit
+                                    </a>
+                                    <form method="post" action="{% url 'DeletePractitioner' practitioner.practitioner_id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-delete" onclick="return confirm('Delete practitioner {{ practitioner.user.first_name }} {{ practitioner.user.last_name }}?')">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </button>
+                                    </form>
+                                {% elif user.user_type == 'IT' %}
+                                    <!-- Limited access for IT - edit only, no delete -->
+                                    <a href="{% url 'EditPractitioner' practitioner.practitioner_id %}" class="btn btn-edit">
+                                        <i class="fas fa-edit"></i>
+                                        Edit
+                                    </a>
+
+                                {% else %}
+                                    <!-- View only for other roles -->
+                                    <span class="access-restricted" title="Practitioner management restricted for {{ user.user_type }} users">
+                                        View Only
+                                    </span>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -90,11 +116,19 @@
         <div class="empty-state">
             <i class="fas fa-user-md"></i>
             <h3>No practitioners found</h3>
-            <p>Get started by adding your first practitioner to the system.</p>
-            <a href="{% url 'NewPractitioner' %}" class="add-practitioner-btn">
-                <i class="fas fa-plus"></i>
-                Add First Practitioner
-            </a>
+            <p>
+                {% if user.user_type == 'admin' %}
+                    Get started by adding your first practitioner to the system.
+                {% else %}
+                    No practitioners in the system.
+                {% endif %}
+            </p>
+            {% if user.user_type == 'admin' %}
+                <a href="{% url 'NewPractitioner' %}" class="add-practitioner-btn">
+                    <i class="fas fa-plus"></i>
+                    Add First Practitioner
+                </a>
+            {% endif %}
         </div>
     {% endif %}
 </div>
