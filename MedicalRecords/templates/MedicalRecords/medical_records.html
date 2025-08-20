@@ -5,7 +5,7 @@ Medical Records
 
 {% block content %}
 <style>
-    /* Modern Medical Records Styling */
+    /* Keep all your existing styles */
     .medical-records-container {
         max-width: 1200px;
         margin: 0 auto;
@@ -207,13 +207,13 @@ Medical Records
         border-color: #d1d5db;
     }
 
-    .btn-add {
+    .btn-view {
         color: #059669;
         border-color: #d1fae5;
         background: #f0fdf4;
     }
 
-    .btn-add:hover {
+    .btn-view:hover {
         background: #dcfce7;
     }
 
@@ -225,6 +225,16 @@ Medical Records
 
     .btn-edit:hover {
         background: #e0f2fe;
+    }
+
+    .btn-delete {
+        color: #dc2626;
+        border-color: #fecaca;
+        background: #fef2f2;
+    }
+
+    .btn-delete:hover {
+        background: #fee2e2;
     }
 
     .empty-state {
@@ -327,11 +337,12 @@ Medical Records
                             Dr. John Doe
                         </div>
                     </td>
-                    <td>{{ record.last_arrived|default:"-" }}</td>
+                    <td>{{ record.last_arrived|date:"M d, Y H:i"|default:"-" }}</td>
                     <td>
                         <div class="actions-cell">
-                            <a class="btn btn-add" href="#" title="View Details">👁️</a>
-                            <a class="btn btn-edit" href="#" title="Edit Record">✏️</a>
+                            <a class="btn btn-view" href="{% url 'view_medical_record_detail' record.record_type record.record_id %}" title="View Details">👁️</a>
+                            <a class="btn btn-edit" href="{% url 'edit_medical_record' record.record_type record.record_id %}" title="Edit Record">✏️</a>
+                            <a class="btn btn-delete" href="{% url 'delete_medical_record' record.record_type record.record_id %}" title="Delete Record">🗑️</a>
                         </div>
                     </td>
                 </tr>
@@ -358,6 +369,15 @@ Medical Records
         tableRows.forEach(row => {
             const text = row.textContent.toLowerCase();
             row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+
+    // Confirmation for delete actions
+    document.querySelectorAll('.btn-delete').forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to delete this medical record? This action cannot be undone.')) {
+                e.preventDefault();
+            }
         });
     });
 </script>

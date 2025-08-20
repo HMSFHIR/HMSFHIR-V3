@@ -40,14 +40,14 @@ def DeleteAppointment(request, appointment_id):
 
 
 def EditAppointment(request, appointment_id):
-    appointment = get_object_or_404(Appointment, AppointmentID=appointment_id)
+    appointment = get_object_or_404(Appointment, appointment_id=appointment_id)
 
     if request.method == 'POST':
         appointment_form = AppointmentForms(request.POST, instance=appointment)
         if appointment_form.is_valid():
             try:
                 appointment_form.save()
-                return redirect('view_appointments', patient_id=appointment.Patient.PatientID)
+                return redirect('Appointment')  # Redirect to appointments list
             except IntegrityError as e:
                 appointment_form.add_error(None, f'Database error: {e}')
     else:

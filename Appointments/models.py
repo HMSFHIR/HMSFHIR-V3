@@ -28,4 +28,4 @@ class Appointment(models.Model):
     ], default='Scheduled')
 
     def __str__(self):
-        return f"Appointment {self.appointment_id} - {self.patient.name}"
+        return f"Appointment {self.appointment_id} - {self.patient.full_name}"

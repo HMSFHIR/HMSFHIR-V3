@@ -185,8 +185,8 @@ def PatientSearchAPI(request):
     return JsonResponse({'patients': patients_data})
     
 def AppointmentView(request):
-    Appointments = Appointment.objects.all()
-    context = {'Appointments' : Appointments }
+    appointments = Appointment.objects.all().order_by('-appointment_date')
+    context = {'appointments': appointments}
     return render(request, "Appointments/appointments.html", context)
 
 def MedicalRecordView(request):
@@ -269,7 +269,7 @@ def ViewRecordsSummary(request, patient_id):
     allergies = AllergyIntolerance.objects.filter(patient=patient)
     procedures = Procedure.objects.filter(patient=patient).order_by('-performed_date')
     immunizations = Immunization.objects.filter(patient=patient)
-    encounters = Encounter.objects.filter(patient=patient).order_by('-encounter_date')
+    encounters = Encounter.objects.filter(patient=patient).order_by('-start_time')
     
     # Get the most recent condition for condition_details
     condition_details = None
