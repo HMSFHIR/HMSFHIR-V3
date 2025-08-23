@@ -1,3 +1,7 @@
+
+<img width="1024" height="1024" alt="HMSFHIRcropped" src="https://github.com/user-attachments/assets/dafbd74c-3009-4578-a724-860228f28cda" />
+
+
 # FHIR HMS Core
 
 This project is the core backend for a Healthcare Management System (HMS) built with Django, PostgreSQL, Redis, and Celery. It provides FHIR-compliant APIs and background task processing.
